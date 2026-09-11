@@ -10,75 +10,84 @@
 </head>
 <body>
 
+    <!-- Top Navigation Header -->
     <div class="top-header">
         <div class="header-title-container">
             <a href="home.html" class="back-arrow" aria-label="Back">&lt;</a>
             <span class="header-title">MY ORDERS</span>
         </div>
-        <div style="display:flex;align-items:center;gap:16px;">
-            <a href="cart.html" class="help-btn" aria-label="Cart">🛒</a>
-            <a href="chat.html" class="help-btn">💬 HELP</a>
-        </div>
+        <a href="chat.html" class="help-btn">💬 HELP</a>
     </div>
 
+    <!-- Search & Filter Controls Section -->
     <div class="search-filter-wrapper">
         <div class="search-bar-container">
             <div class="search-input-box">
                 <span>🔍</span>
-                <input type="text" id="orderSearchInput" placeholder="Search by product name...">
+                <input type="text" id="searchInput" placeholder="Search by Product Name or Order ID..." onkeyup="filterOrders()">
             </div>
-            <button type="button" class="filter-btn" id="openFilterBtn">⚙️ Filter</button>
+            <button class="filter-btn" onclick="openFilterDrawer()">⚙️ Filter</button>
         </div>
 
-        <div class="filter-tabs-row" id="filterTabsRow">
-            <div class="tab-chip active" data-filter="all">All Orders</div>
-            <div class="tab-chip" data-filter="cod">Cash on Delivery</div>
-            <div class="tab-chip" data-filter="online">Online Paid</div>
-            <div class="tab-chip" data-filter="delivered">Delivered</div>
+        <div class="filter-tabs-row">
+            <div class="tab-chip active" onclick="switchTab(this, 'all')">All Orders</div>
+            <div class="tab-chip" onclick="switchTab(this, 'cod')">Cash on Delivery</div>
+            <div class="tab-chip" onclick="switchTab(this, 'paid')">Online Paid</div>
+            <div class="tab-chip" onclick="switchTab(this, 'delivered')">Delivered</div>
         </div>
     </div>
 
-    <div id="orders"></div>
+    <!-- Orders List Container — filled with real orders by orders.js -->
+    <div id="ordersContainer">
+        <div style="text-align:center;padding:40px 16px;color:#888;">Loading your orders…</div>
+    </div>
 
-    <!-- Filter Drawer (Status) -->
+    <!-- Filter Drawer Popup (Meesho Style) -->
     <div class="filter-modal-overlay" id="filterModal">
         <div class="filter-drawer">
             <div>
                 <div class="filter-header">
                     <span>Filters</span>
-                    <span style="cursor:pointer;" id="closeFilterBtn">&times;</span>
+                    <span style="cursor: pointer;" onclick="closeFilterDrawer()">&times;</span>
+                </div>
+
+                <div class="filter-group">
+                    <div class="filter-title">Payment Mode</div>
+                    <div class="filter-options">
+                        <button class="filter-option-btn selected" onclick="toggleFilterOpt(this)">All</button>
+                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Cash on Delivery</button>
+                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Prepaid / Online</button>
+                    </div>
                 </div>
 
                 <div class="filter-group">
                     <div class="filter-title">Order Status</div>
-                    <div class="filter-options" id="statusFilterOptions">
-                        <button type="button" class="filter-option-btn selected" data-value="All">All</button>
-                        <button type="button" class="filter-option-btn" data-value="Pending">Pending</button>
-                        <button type="button" class="filter-option-btn" data-value="Shipped">Shipped</button>
-                        <button type="button" class="filter-option-btn" data-value="Delivered">Delivered</button>
-                        <button type="button" class="filter-option-btn" data-value="Cancelled">Cancelled</button>
+                    <div class="filter-options">
+                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Processing</button>
+                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Shipped</button>
+                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Delivered</button>
                     </div>
                 </div>
             </div>
 
             <div class="filter-actions">
-                <button type="button" class="btn-reset-filter" id="resetFilterBtn">Reset</button>
-                <button type="button" class="btn-apply-filter" id="applyFilterBtn">Apply Filters</button>
+                <button class="btn-reset-filter" onclick="closeFilterDrawer()">Reset</button>
+                <button class="btn-apply-filter" onclick="closeFilterDrawer()">Apply Filters</button>
             </div>
         </div>
     </div>
 
-    <!-- Real Cashback reveal modal -->
-    <div class="modal-overlay" id="cashbackModal">
+    <!-- Cashback Modal Popup (real amount + real status) -->
+    <div class="modal-overlay" id="scratchModal">
         <div class="scratch-card-box">
-            <button type="button" class="close-modal-btn" id="closeCashbackBtn">&times;</button>
-            <h4 style="font-size:15px;color:#111;">🎁 Delivery Cashback</h4>
-            <p id="cashbackSubtext" style="font-size:12px;color:#666;margin-top:4px;"></p>
+            <button class="close-modal-btn" onclick="closeScratchCard()">&times;</button>
+            <h4 style="font-size: 15px; color: #111;">🎁 Delivery Cashback</h4>
+            <p style="font-size: 12px; color: #666; margin-top: 4px;" id="cashbackSubtext"></p>
 
             <div class="scratch-area" style="height:auto;">
                 <div class="coupon-reward" style="position:static;padding:16px 0;">
-                    <span style="font-size:11px;color:#16a34a;font-weight:bold;" id="cashbackStatusLabel"></span>
-                    <span class="coupon-code" id="cashbackAmountDisplay"></span>
+                    <span style="font-size: 11px; color: #16a34a; font-weight: bold;" id="cashbackStatusLabel"></span>
+                    <span class="coupon-code" id="couponCodeDisplay"></span>
                 </div>
             </div>
         </div>
@@ -86,5 +95,65 @@
 
     <script type="module" src="orders.js"></script>
 
+    <script>
+        function toggleDetails(cardElement) {
+            const panel = cardElement.querySelector('.full-details-panel');
+            panel.classList.toggle('show');
+        }
+
+        function filterOrders() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let cards = document.querySelectorAll('.order-card-item');
+
+            cards.forEach(card => {
+                let text = card.innerText.toLowerCase();
+                card.style.display = text.includes(input) ? "block" : "none";
+            });
+        }
+
+        function switchTab(element, filterType) {
+            document.querySelectorAll('.tab-chip').forEach(chip => chip.classList.remove('active'));
+            element.classList.add('active');
+
+            let cards = document.querySelectorAll('.order-card-item');
+            cards.forEach(card => {
+                let cardType = card.getAttribute('data-type');
+                let cardStatus = card.getAttribute('data-status');
+
+                if (filterType === 'all') {
+                    card.style.display = 'block';
+                } else if (filterType === 'delivered' && cardStatus === 'delivered') {
+                    card.style.display = 'block';
+                } else if (cardType === filterType) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function openFilterDrawer() {
+            document.getElementById('filterModal').classList.add('active');
+        }
+
+        function closeFilterDrawer() {
+            document.getElementById('filterModal').classList.remove('active');
+        }
+
+        function toggleFilterOpt(btn) {
+            btn.classList.toggle('selected');
+        }
+
+        /*
+          NOTE: shareOrder, trackOrder and openScratchCard/closeScratchCard
+          are defined in orders.js (as real, data-backed versions) instead
+          of here, since they need access to each order's real Firestore
+          data (real cashback amount/status, real order id for tracking).
+          There is no "payNow" here anymore — a placed order (COD or
+          already paid online) has no real "pay again" step, so a fake
+          "Redirecting to Payment Gateway" alert was removed rather than
+          shipped as a dead button.
+        */
+    </script>
 </body>
 </html>
