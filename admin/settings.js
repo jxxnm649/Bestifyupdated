@@ -81,6 +81,11 @@ function applyToForm(settings) {
   supportPhone.value = settings.supportPhone ?? "";
   storeAddress.value = settings.storeAddress ?? "";
 
+  if (settings.homeBannerUrl) {
+    bannerPreviewImg.src = settings.homeBannerUrl;
+    bannerPreviewWrap.style.display = "block";
+  }
+
   shippingFee.value = settings.shippingFee ?? 0;
   freeShippingThreshold.value = settings.freeShippingThreshold ?? 0;
   taxRate.value = settings.taxRate ?? 0;
@@ -93,6 +98,68 @@ function applyToForm(settings) {
   onlinePaymentsEnabled.checked = settings.onlinePaymentsEnabled === true;
   maintenanceMode.checked = settings.maintenanceMode === true;
 
+}
+
+
+/* =========================
+   HOME BANNER UPLOAD (real Cloudinary, same account used elsewhere)
+========================= */
+
+const bannerFile = document.getElementById("bannerFile");
+const uploadBannerBtn = document.getElementById("uploadBannerBtn");
+const bannerUploadStatus = document.getElementById("bannerUploadStatus");
+const bannerPreviewWrap = document.getElementById("bannerPreviewWrap");
+const bannerPreviewImg = document.getElementById("bannerPreviewImg");
+
+if (uploadBannerBtn) {
+  uploadBannerBtn.addEventListener("click", async () => {
+
+    const file = bannerFile.files[0];
+    if (!file) {
+      bannerUploadStatus.textContent = "Choose a photo first.";
+      bannerUploadStatus.style.color = "var(--bf-danger, #c0392b)";
+      return;
+    }
+
+    uploadBannerBtn.disabled = true;
+    bannerUploadStatus.textContent = "Uploading...";
+    bannerUploadStatus.style.color = "var(--ink-soft)";
+
+    try {
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "Bestifyimg");
+
+      const response = await fetch(
+        "https://api.cloudinary.com/v1_1/rgksliph/image/upload",
+        { method: "POST", body: formData }
+      );
+
+      const data = await response.json();
+      if (!data.secure_url) throw new Error("Upload failed. Please try again.");
+
+      await setDoc(SETTINGS_DOC, { homeBannerUrl: data.secure_url, updatedAt: serverTimestamp() }, { merge: true });
+
+      await logAdminAction("Updated home banner", "Settings", { url: data.secure_url });
+
+      bannerPreviewImg.src = data.secure_url;
+      bannerPreviewWrap.style.display = "block";
+      bannerFile.value = "";
+
+      bannerUploadStatus.textContent = "✓ Banner updated — live on the home page now.";
+      bannerUploadStatus.style.color = "var(--bf-success, #2e7d32)";
+      showToast("Home banner updated", "success");
+
+    } catch (error) {
+      console.error(error);
+      bannerUploadStatus.textContent = error.message || "Upload failed.";
+      bannerUploadStatus.style.color = "var(--bf-danger, #c0392b)";
+    } finally {
+      uploadBannerBtn.disabled = false;
+    }
+
+  });
 }
 
 function readFromForm() {
