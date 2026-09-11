@@ -448,7 +448,92 @@ exports.processWithdrawal = onCall(async (request) => {
 
 
 /* ============================================================
-   4) LOGOUT OF ALL DEVICES
+   4a) PAY NOW — switch an existing COD order to paid-online
+   Lets a customer pay for an order they originally placed as COD,
+   while it's still early enough to matter (not yet shipped). The
+   signature check is the same as verifyRazorpayPayment; the
+   difference is this UPDATES an existing order instead of creating
+   a new one, and re-checks server-side that the order still belongs
+   to the caller and is still COD + early-stage before touching it —
+   never trusts the client's word for any of that.
+   ============================================================ */
+
+exports.payExistingOrderOnline = onCall(
+  { secrets: [RAZORPAY_KEY_SECRET] },
+  async (request) => {
+
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "You must be signed in to pay.");
+    }
+
+    const {
+      orderId,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    } = request.data || {};
+
+    if (!orderId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      throw new HttpsError("invalid-argument", "Missing payment verification details.");
+    }
+
+    const expectedSignature = crypto
+      .createHmac("sha256", RAZORPAY_KEY_SECRET.value())
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
+      logger.warn("Razorpay signature mismatch (pay existing order)", {
+        uid: request.auth.uid,
+        orderId
+      });
+      throw new HttpsError("failed-precondition", "Payment verification failed.");
+    }
+
+    const orderRef = db.collection("orders").doc(orderId);
+    const orderSnap = await orderRef.get();
+
+    if (!orderSnap.exists) {
+      throw new HttpsError("not-found", "Order not found.");
+    }
+
+    const order = orderSnap.data();
+
+    if (order.userId !== request.auth.uid) {
+      throw new HttpsError("permission-denied", "This isn't your order.");
+    }
+
+    if (order.paymentMethod !== "cod") {
+      throw new HttpsError("failed-precondition", "This order isn't Cash on Delivery.");
+    }
+
+    if (!["Pending", "Confirmed", "Packed"].includes(order.status)) {
+      throw new HttpsError("failed-precondition", "This order can no longer be paid online — it's already shipped.");
+    }
+
+    await orderRef.update({
+      paymentMethod: "online",
+      paymentId: razorpay_payment_id,
+      razorpayOrderId: razorpay_order_id,
+      paidAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    await db.collection("auditLogs").add({
+      action: "Order switched COD -> paid online",
+      module: "Orders",
+      performedBy: request.auth.token?.email || request.auth.uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      details: { orderId, paymentId: razorpay_payment_id }
+    });
+
+    return { success: true };
+
+  }
+);
+
+
+/* ============================================================
+   4b) LOGOUT OF ALL DEVICES
    Revokes every refresh token for the calling user (Admin SDK only —
    Firebase has no way to selectively revoke a single device's
    session). The current device is signed out locally by the client
