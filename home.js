@@ -746,3 +746,22 @@ onAuthStateChanged(auth, async (user) => {
     }
   });
 })();
+
+/* =========================
+   Real home banner (admin-uploaded) — falls back to the static
+   promo-banner.png file if the admin hasn't set one yet.
+========================= */
+(async function () {
+  const bannerImg = document.getElementById("homeBannerImg");
+  if (!bannerImg) return;
+
+  try {
+    const snap = await getDoc(doc(db, "settings", "store"));
+    if (snap.exists() && snap.data().homeBannerUrl) {
+      bannerImg.src = snap.data().homeBannerUrl;
+    }
+  } catch (error) {
+    console.log(error);
+  }
+})();
+
