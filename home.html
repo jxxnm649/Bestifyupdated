@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bestify Store</title>
+
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body class="bf-has-nav">
+
+    <div class="container">
+
+        <div class="top-header">
+            <span class="brand-name"><span class="brand-name-bestify">Bestify</span> <span class="brand-name-mobile">Mobile</span></span>
+            <a href="coverindex.html" class="find-fit-btn" aria-label="Find phone accessories">
+                <i class="fa-solid fa-camera"></i> FIND FIT
+            </a>
+        </div>
+
+        <!-- Real promo banner (shop's own marketing poster) -->
+        <div class="shop-photo-box">
+            <img src="promo-banner.png" alt="Bestify Mobile Kolavi — Your Mobile, Our Priority">
+        </div>
+
+        <!-- Auto-rotating social card (YouTube / WhatsApp — real links) -->
+        <div class="social-rotator" id="socialRotator">
+            <a href="https://youtube.com/@bestifymobilekolavi" target="_blank" rel="noopener" class="yt-card social-slide active">
+                <div class="yt-left">
+                    <span class="yt-icon" style="background:#ff0000;">▶</span>
+                    <div class="yt-text">
+                        <div>Subscribe on YouTube</div>
+                        <div>Product unboxing &amp; reviews</div>
+                    </div>
+                </div>
+                <span>›</span>
+            </a>
+            <a href="https://chat.whatsapp.com/Cks7jxkxJJKGBnepHs8U5j" target="_blank" rel="noopener" class="yt-card social-slide">
+                <div class="yt-left">
+                    <span class="yt-icon" style="background:#25d366;">🟢</span>
+                    <div class="yt-text">
+                        <div>Join WhatsApp Community</div>
+                        <div>Get daily new stock updates</div>
+                    </div>
+                </div>
+                <span>›</span>
+            </a>
+        </div>
+
+        <!-- Search -->
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Search Products">
+        </div>
+
+        <!-- Categories -->
+        <div class="category-bar" id="categoryBar"></div>
+
+        <!-- Grid / Zoomed view toggle -->
+        <div class="zoom-control">
+            <span>🔎 Size:</span>
+            <input type="range" id="zoomSlider" min="0" max="1" step="1" value="0">
+        </div>
+
+        <!-- View mode (real data: date placed, real category, real wishlist "interest") -->
+        <div class="filter-options-bar" id="filterOptionsBar">
+            <button type="button" class="filter-option-btn active" data-mode="all">🛍️ All Products</button>
+            <button type="button" class="filter-option-btn" data-mode="date">📅 Date Wise</button>
+            <button type="button" class="filter-option-btn" data-mode="category">🏷️ Category Wise</button>
+            <button type="button" class="filter-option-btn" data-mode="interest">❤️ Liked First</button>
+        </div>
+
+        <!-- Featured / Best Sellers -->
+        <h2 id="featuredTitle" class="section-title" style="display:none;">⭐ Best Sellers</h2>
+        <div id="featuredContainer" class="catalog-grid"></div>
+
+        <!-- Products -->
+        <h2 class="section-title" id="productsSectionTitle">Our Products</h2>
+
+        <div id="displayArea"></div>
+
+        <!-- Contact / Visit Us Footer -->
+        <div class="shop-footer">
+            <h2 class="section-title">📍 Visit Us / Connect</h2>
+
+            <div class="shop-photos">
+                <img src="shop-front.jpg" alt="Bestify Mobile Kolavi shop front">
+                <img src="shop-street.jpg" alt="Bestify Mobile Kolavi street view">
+            </div>
+
+            <a class="shop-map-btn" href="https://maps.app.goo.gl/xfazo8HGgp3R59V37" target="_blank" rel="noopener">
+                📍 Get Directions
+            </a>
+
+            <a class="shop-call-btn" href="tel:+919110690727">
+                📞 Call Us: 9110690727
+            </a>
+
+            <div class="shop-footer-links">
+                <a href="about.html">About</a>
+                <a href="contact.html">Contact</a>
+                <a href="terms.html">T&amp;C</a>
+                <a href="return-policy.html">Return Policy</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav-container">
+
+        <a href="home.html" class="fnav-item active">
+            <span class="fnav-icon">🏪</span>
+            <span>Store</span>
+        </a>
+
+        <a href="wishlist.html" class="fnav-item">
+            <span class="fnav-icon">👍</span>
+            <span>Liked</span>
+        </a>
+
+        <a href="orders.html" class="fnav-item">
+            <span class="fnav-icon">🛍️</span>
+            <span>Orders</span>
+        </a>
+
+        <a href="profile.html" class="fnav-avatar" id="fnavAvatarWrap" aria-label="My Account">
+            <span class="fnav-avatar-inner" id="fnavAvatarInner">·</span>
+        </a>
+
+    </nav>
+
+    <script type="module" src="home.js"></script>
+    <script type="module" src="profile-menu.js"></script>
+
+</body>
+
+</html>

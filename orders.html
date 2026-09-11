@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light only">
+    <title>My Orders</title>
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="orders.css">
+</head>
+<body class="bf-has-nav">
+
+    <div class="header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>MY ORDERS</span>
+        <a href="cart.html" style="color:inherit;font-size:18px;text-decoration:none;" aria-label="Cart">🛒</a>
+    </div>
+
+    <div class="search-container">
+        <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="orderSearchInput" placeholder="Search orders">
+        </div>
+        <div class="filter-btn" id="openFilterBtn">
+            <span>☰</span> Filters
+        </div>
+    </div>
+
+    <div id="orders"></div>
+
+    <div class="modal-overlay" id="filterModal">
+        <div class="filter-modal">
+            <div class="modal-header">
+                <span class="modal-title">FILTER BY</span>
+                <span class="close-btn" id="closeFilterBtn">&times;</span>
+            </div>
+
+            <div class="filter-section-title">Status</div>
+
+            <div class="options-list" id="statusOptionsList">
+                <div class="option-item selected" data-value="All">
+                    <div class="custom-radio"></div>
+                    <span>All</span>
+                </div>
+                <div class="option-item" data-value="Pending">
+                    <div class="custom-radio"></div>
+                    <span>Pending</span>
+                </div>
+                <div class="option-item" data-value="Confirmed">
+                    <div class="custom-radio"></div>
+                    <span>Confirmed</span>
+                </div>
+                <div class="option-item" data-value="Packed">
+                    <div class="custom-radio"></div>
+                    <span>Packed</span>
+                </div>
+                <div class="option-item" data-value="Shipped">
+                    <div class="custom-radio"></div>
+                    <span>Shipped</span>
+                </div>
+                <div class="option-item" data-value="Delivered">
+                    <div class="custom-radio"></div>
+                    <span>Delivered</span>
+                </div>
+                <div class="option-item" data-value="Cancelled">
+                    <div class="custom-radio"></div>
+                    <span>Cancelled</span>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-clear" id="clearFilterBtn">Clear</button>
+                <button class="btn-apply" id="applyFilterBtn">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="home.html"><span>🏠</span><p>Home</p></a>
+        <a href="wishlist.html"><span>😊</span><p>Liked</p></a>
+        <a href="orders.html" class="active"><span>📦</span><p>Orders</p></a>
+        <a href="profile.html"><span>🏪</span><p>My Account</p></a>
+    </nav>
+
+    <script type="module" src="orders.js"></script>
+    <script type="module" src="profile-menu.js"></script>
+
+</body>
+</html>
