@@ -194,9 +194,16 @@ body {
     gap: 12px; 
 }
 
+/* !important here is necessary: theme.css has a generic ".card img"
+   rule (for a different, unrelated card component elsewhere on the
+   site) that is more CSS-specific than a single class and was
+   silently overriding this thumbnail's size to 100% width — which
+   also squeezed .product-text into a sliver, wrapping its text one
+   character per line. */
 .product-thumb { 
-    width: 68px; 
-    height: 68px; 
+    width: 68px !important; 
+    height: 68px !important; 
+    aspect-ratio: 1 / 1 !important;
     object-fit: cover; 
     border-radius: 8px; 
     background: #eeeeee; 
