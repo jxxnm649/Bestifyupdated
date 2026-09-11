@@ -25,14 +25,34 @@ function escapeHtml(str) {
   })[m]);
 }
 
-function formatDate(ts) {
+function toDate(ts) {
   try {
-    const d = ts?.toDate ? ts.toDate() : new Date(ts);
-    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) +
-      " · " + d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    return ts?.toDate ? ts.toDate() : new Date(ts);
   } catch {
-    return "Not available";
+    return null;
   }
+}
+
+function formatDateTime(ts) {
+  const d = toDate(ts);
+  if (!d || isNaN(d.getTime())) return "Not available";
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) +
+    ", " + d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDateLong(d) {
+  return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+}
+
+// Real estimate — order date + 4 days, matching the "2-4 business days"
+// estimate used at checkout elsewhere on the site. Not a live courier
+// ETA (this shop doesn't have one), just an honest ballpark.
+function estimatedDeliveryDate(order) {
+  const created = toDate(order.createdAt);
+  if (!created || isNaN(created.getTime())) return null;
+  const est = new Date(created);
+  est.setDate(est.getDate() + 4);
+  return est;
 }
 
 function stepIndexFor(status) {
@@ -64,7 +84,7 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
   if (!orderId) {
-    orderContent.innerHTML = `<div class="no-results"><h2>No order specified</h2></div>`;
+    orderContent.innerHTML = `<div class="card no-results"><h2>No order specified</h2></div>`;
     return;
   }
 
@@ -74,21 +94,21 @@ onAuthStateChanged(auth, async (user) => {
 
 async function loadOrder() {
 
-  orderContent.innerHTML = `<div class="no-results"><h2>Loading order…</h2></div>`;
+  orderContent.innerHTML = `<div class="card" style="text-align:center;color:#777;">Loading order…</div>`;
 
   try {
 
     const snap = await getDoc(doc(db, "orders", orderId));
 
     if (!snap.exists()) {
-      orderContent.innerHTML = `<div class="no-results"><h2>Order not found</h2></div>`;
+      orderContent.innerHTML = `<div class="card no-results"><h2>Order not found</h2></div>`;
       return;
     }
 
     const order = { id: snap.id, ...snap.data() };
 
     if (order.userId !== currentUser.uid) {
-      orderContent.innerHTML = `<div class="no-results"><h2>You don't have access to this order</h2></div>`;
+      orderContent.innerHTML = `<div class="card no-results"><h2>You don't have access to this order</h2></div>`;
       return;
     }
 
@@ -98,13 +118,12 @@ async function loadOrder() {
   } catch (error) {
     console.error(error);
     orderContent.innerHTML = `
-      <div class="no-results">
+      <div class="card no-results">
         <h2>❌ Couldn't load this order</h2>
         <p>${escapeHtml(error.message || "Please try again.")}</p>
-        <button type="button" class="btn-cancel-order" id="retryOrderBtn" style="margin-top:12px;">Retry</button>
+        <button type="button" class="cancel-btn" id="retryOrderBtn" style="margin-top:12px;">Retry</button>
       </div>`;
-    const retryBtn = document.getElementById("retryOrderBtn");
-    if (retryBtn) retryBtn.addEventListener("click", loadOrder);
+    document.getElementById("retryOrderBtn")?.addEventListener("click", loadOrder);
   }
 
 }
@@ -116,90 +135,100 @@ function render(order) {
   const total = order.total ?? order.totalPrice ?? 0;
   const isCancelled = order.status === "Cancelled";
   const isDelivered = order.status === "Delivered";
-  const canCancel = ["Pending", "Confirmed", "Ordered", "Packed"].includes(order.status);
+  const canCancel = ["Pending", "Confirmed", "Packed"].includes(order.status);
+  const isCOD = order.paymentMethod === "cod";
 
   const activeIndex = stepIndexFor(order.status);
   const progressPct = isCancelled ? 0 : (activeIndex / (STEPS.length - 1)) * 100;
 
+  const estDate = estimatedDeliveryDate(order);
+
   orderContent.innerHTML = `
 
-    <div class="card">
-      <div class="product-main-info">
-        <img class="product-thumb" src="${escapeHtml(firstProduct.image || "")}" alt="">
-        <div class="product-text">
-          <div class="order-id-title">Order #${escapeHtml(order.orderNumber || order.id.slice(0, 8).toUpperCase())}</div>
-          <div class="item-list-note">${escapeHtml(firstProduct.productName || "Product")}${products.length > 1 ? ` +${products.length - 1} more item${products.length > 2 ? "s" : ""}` : ""}</div>
-          <div class="variant-price">Qty: ${firstProduct.qty || 1} &bull; ₹${total}</div>
-        </div>
+    <div class="card product-card">
+      <img class="product-img" src="${escapeHtml(firstProduct.image || "")}" alt="${escapeHtml(firstProduct.productName || "")}">
+      <div class="product-info">
+        <div class="product-title">${escapeHtml(firstProduct.productName || "Product")}${products.length > 1 ? ` +${products.length - 1} more` : ""}</div>
+        <div class="product-meta">Qty: ${firstProduct.qty || 1}</div>
+        <div class="product-price">₹${total}</div>
       </div>
-    </div>
-
-    <div class="card share-row">
-      <div class="share-preview">
-        <img class="share-mini-thumb" src="${escapeHtml(firstProduct.image || "")}" alt="">
-        <span>Share your purchase with friends</span>
-      </div>
-      <button type="button" class="share-btn" id="shareOrderBtn">📤 SHARE</button>
+      <button type="button" class="share-btn" id="shareOrderBtn">🔗 Share</button>
     </div>
 
     <div class="card">
-      <div class="tracking-header">
-        <div class="status-icon ${isCancelled ? "rust" : ""}">${isCancelled ? "✕" : isDelivered ? "✓" : (activeIndex + 1)}</div>
-        <div>
-          <div class="tracking-status-title">${isCancelled ? "Order Cancelled" : STEPS[activeIndex]}</div>
-          <div class="tracking-sub">Placed on ${formatDate(order.createdAt)}</div>
+
+      ${isCancelled ? `
+        <div class="delivery-estimate cancelled">
+          <span class="truck-icon">❌</span>
+          <div>
+            <div class="est-title">Order Cancelled</div>
+            <div class="est-date">${order.cancelledAt ? formatDateTime(order.cancelledAt) : ""}</div>
+          </div>
         </div>
+      ` : isDelivered ? `
+        <div class="delivery-estimate">
+          <span class="truck-icon">✅</span>
+          <div>
+            <div class="est-title">Delivered</div>
+            <div class="est-date">${estDate ? formatDateLong(estDate) : ""}</div>
+          </div>
+        </div>
+      ` : estDate ? `
+        <div class="delivery-estimate">
+          <span class="truck-icon">🚚</span>
+          <div>
+            <div class="est-title">Estimated Delivery</div>
+            <div class="est-date">By ${formatDateLong(estDate)}</div>
+          </div>
+        </div>
+      ` : ""}
+
+      <div class="tracker-header">
+        <div class="status-title">${isCancelled ? "Cancelled" : STEPS[activeIndex]}</div>
+        <div class="order-date">Placed on ${formatDateTime(order.createdAt)}</div>
       </div>
 
       ${isCancelled ? `
-        <div class="cancelled-note">❌ This order was cancelled${order.cancelledAt ? " on " + formatDate(order.cancelledAt) : ""}.</div>
+        <div class="cancelled-note">This order was cancelled and will not be delivered.</div>
       ` : `
-        <div class="steps-wrapper">
-          <div class="progress-line-bg"></div>
-          <div class="progress-line-active" style="width:${progressPct}%;"></div>
+        <div class="steps" style="--progress:${progressPct}%;">
           ${STEPS.map((label, i) => `
-            <div class="step-item">
-              <div class="step-circle ${i < activeIndex ? "completed" : i === activeIndex ? "current" : ""}">${i < activeIndex ? "✓" : i + 1}</div>
-              <div class="step-label">${label}</div>
+            <div class="step ${i <= activeIndex ? "active" : ""}">
+              <div class="step-icon">${i < activeIndex ? "✓" : i + 1}</div>
+              <div>${label}</div>
             </div>
           `).join("")}
         </div>
 
-        ${canCancel ? `
-          <div class="cancel-row">
-            <span class="cancel-text">Cancellation available till it ships.</span>
-            <button type="button" class="btn-cancel-order" id="cancelOrderBtn">Cancel Order</button>
-          </div>
-        ` : ""}
+        ${canCancel ? `<button type="button" class="cancel-btn" id="cancelOrderBtn">Cancel Order</button>` : ""}
       `}
+
     </div>
 
     <div class="card">
-      <div class="payment-mode-header">
-        <span>Payment mode:</span>
-        <span class="payment-value">${order.paymentMethod === "cod" ? "Cash on Delivery" : "Paid Online"} &bull; ₹${total}</span>
-      </div>
+      <div class="section-title">Delivery Address</div>
+      <div class="address-name">${escapeHtml(order.customerName || "Customer")}</div>
+      <div class="address-text">${escapeHtml(order.address || "Not available")}</div>
+      <div class="address-text">📱 ${escapeHtml(order.mobile || "")}</div>
     </div>
 
     <div class="card">
-      <div class="address-header">
-        <span class="address-title">📍 Delivery Address</span>
+      <div class="section-title">Payment &amp; Bill Details</div>
+      <div class="price-row">
+        <span>Item Price</span>
+        <span>₹${total}</span>
       </div>
-      <div class="address-body">
-        <div class="address-name">${escapeHtml(order.customerName || "Customer")}</div>
-        <div>${escapeHtml(order.address || "Not available")}</div>
-        <div>${escapeHtml(order.mobile || "")}</div>
+      <div class="price-row">
+        <span>Delivery Fee</span>
+        <span style="color:#2e7d32;">FREE</span>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="bill-row"><span>Total Product Price</span><span>₹${total}</span></div>
-      <div class="total-payment-row">
-        <div class="payment-type-left">
-          <span>${order.paymentMethod === "cod" ? "💵" : "💳"}</span>
-          <span>${order.paymentMethod === "cod" ? "Cash On Delivery" : "Paid Online"}</span>
-        </div>
-        <span class="final-price">₹${total}</span>
+      <div class="price-row">
+        <span>Payment Mode</span>
+        <span class="${isCOD ? "badge-cod" : "badge-paid"}">${isCOD ? "Cash on Delivery" : "Paid Online"}</span>
+      </div>
+      <div class="price-row total">
+        <span>Total Amount</span>
+        <span>₹${total}</span>
       </div>
     </div>
 

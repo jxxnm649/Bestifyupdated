@@ -1,28 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="kn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light only">
     <title>Order Details</title>
-    <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="order-details.css">
 </head>
 <body>
 
-    <div class="top-header">
-        <div class="header-title-container">
-            <a href="orders.html" class="back-arrow" aria-label="Back">&lt;</a>
-            <span class="header-title">ORDER DETAILS</span>
-        </div>
-        <a href="chat.html" class="help-btn">💬 HELP</a>
-    </div>
+<div class="top-bar">
+    <a href="orders.html" aria-label="Back">←</a>
+    <span>Order Details</span>
+</div>
 
-    <div id="orderContent">
-        <div class="no-results"><h2>Loading order…</h2></div>
-    </div>
+<div class="container" id="orderContent">
+    <div class="card" style="text-align:center;color:#777;">Loading order…</div>
+</div>
 
-    <script type="module" src="order-details.js"></script>
+<script type="module" src="order-details.js"></script>
 
 </body>
 </html>
