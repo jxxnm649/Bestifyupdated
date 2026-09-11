@@ -8,81 +8,83 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="orders.css">
 </head>
-<body class="bf-has-nav">
+<body>
 
-    <div class="header" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>MY ORDERS</span>
-        <a href="cart.html" style="color:inherit;font-size:18px;text-decoration:none;" aria-label="Cart">🛒</a>
+    <div class="top-header">
+        <div class="header-title-container">
+            <a href="home.html" class="back-arrow" aria-label="Back">&lt;</a>
+            <span class="header-title">MY ORDERS</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+            <a href="cart.html" class="help-btn" aria-label="Cart">🛒</a>
+            <a href="chat.html" class="help-btn">💬 HELP</a>
+        </div>
     </div>
 
-    <div class="search-container">
-        <div class="search-box">
-            <span>🔍</span>
-            <input type="text" id="orderSearchInput" placeholder="Search orders">
+    <div class="search-filter-wrapper">
+        <div class="search-bar-container">
+            <div class="search-input-box">
+                <span>🔍</span>
+                <input type="text" id="orderSearchInput" placeholder="Search by product name...">
+            </div>
+            <button type="button" class="filter-btn" id="openFilterBtn">⚙️ Filter</button>
         </div>
-        <div class="filter-btn" id="openFilterBtn">
-            <span>☰</span> Filters
+
+        <div class="filter-tabs-row" id="filterTabsRow">
+            <div class="tab-chip active" data-filter="all">All Orders</div>
+            <div class="tab-chip" data-filter="cod">Cash on Delivery</div>
+            <div class="tab-chip" data-filter="online">Online Paid</div>
+            <div class="tab-chip" data-filter="delivered">Delivered</div>
         </div>
     </div>
 
     <div id="orders"></div>
 
-    <div class="modal-overlay" id="filterModal">
-        <div class="filter-modal">
-            <div class="modal-header">
-                <span class="modal-title">FILTER BY</span>
-                <span class="close-btn" id="closeFilterBtn">&times;</span>
-            </div>
+    <!-- Filter Drawer (Status) -->
+    <div class="filter-modal-overlay" id="filterModal">
+        <div class="filter-drawer">
+            <div>
+                <div class="filter-header">
+                    <span>Filters</span>
+                    <span style="cursor:pointer;" id="closeFilterBtn">&times;</span>
+                </div>
 
-            <div class="filter-section-title">Status</div>
-
-            <div class="options-list" id="statusOptionsList">
-                <div class="option-item selected" data-value="All">
-                    <div class="custom-radio"></div>
-                    <span>All</span>
-                </div>
-                <div class="option-item" data-value="Pending">
-                    <div class="custom-radio"></div>
-                    <span>Pending</span>
-                </div>
-                <div class="option-item" data-value="Confirmed">
-                    <div class="custom-radio"></div>
-                    <span>Confirmed</span>
-                </div>
-                <div class="option-item" data-value="Packed">
-                    <div class="custom-radio"></div>
-                    <span>Packed</span>
-                </div>
-                <div class="option-item" data-value="Shipped">
-                    <div class="custom-radio"></div>
-                    <span>Shipped</span>
-                </div>
-                <div class="option-item" data-value="Delivered">
-                    <div class="custom-radio"></div>
-                    <span>Delivered</span>
-                </div>
-                <div class="option-item" data-value="Cancelled">
-                    <div class="custom-radio"></div>
-                    <span>Cancelled</span>
+                <div class="filter-group">
+                    <div class="filter-title">Order Status</div>
+                    <div class="filter-options" id="statusFilterOptions">
+                        <button type="button" class="filter-option-btn selected" data-value="All">All</button>
+                        <button type="button" class="filter-option-btn" data-value="Pending">Pending</button>
+                        <button type="button" class="filter-option-btn" data-value="Shipped">Shipped</button>
+                        <button type="button" class="filter-option-btn" data-value="Delivered">Delivered</button>
+                        <button type="button" class="filter-option-btn" data-value="Cancelled">Cancelled</button>
+                    </div>
                 </div>
             </div>
 
-            <div class="modal-actions">
-                <button class="btn-clear" id="clearFilterBtn">Clear</button>
-                <button class="btn-apply" id="applyFilterBtn">Apply</button>
+            <div class="filter-actions">
+                <button type="button" class="btn-reset-filter" id="resetFilterBtn">Reset</button>
+                <button type="button" class="btn-apply-filter" id="applyFilterBtn">Apply Filters</button>
             </div>
         </div>
     </div>
 
-    <nav class="bottom-nav">
-        <a href="home.html"><span>🏠</span><p>Home</p></a>
-        <a href="wishlist.html"><span>😊</span><p>Liked</p></a>
-        <a href="orders.html" class="active"><span>📦</span><p>Orders</p></a>
-        <a href="profile.html"><span>🏪</span><p>My Account</p></a>
-    </nav>
+    <!-- Real Cashback reveal modal -->
+    <div class="modal-overlay" id="cashbackModal">
+        <div class="scratch-card-box">
+            <button type="button" class="close-modal-btn" id="closeCashbackBtn">&times;</button>
+            <h4 style="font-size:15px;color:#111;">🎁 Delivery Cashback</h4>
+            <p id="cashbackSubtext" style="font-size:12px;color:#666;margin-top:4px;"></p>
+
+            <div class="scratch-area" style="height:auto;">
+                <div class="coupon-reward" style="position:static;padding:16px 0;">
+                    <span style="font-size:11px;color:#16a34a;font-weight:bold;" id="cashbackStatusLabel"></span>
+                    <span class="coupon-code" id="cashbackAmountDisplay"></span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="orders.js"></script>
-    <script type="module" src="profile-menu.js"></script>
 
 </body>
 </html>
