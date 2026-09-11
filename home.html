@@ -22,16 +22,22 @@
             </a>
         </div>
 
+        <!-- Delivery pincode line (edit is just a display label — not a real serviceability check) -->
+        <div class="delivery-line">
+            <span>📍 Delivering to <strong id="deliveryPincode">591344</strong> — within 3 days</span>
+            <button type="button" id="editPincodeBtn">Edit</button>
+        </div>
+
         <!-- Real promo banner (shop's own marketing poster) -->
         <div class="shop-photo-box">
             <img src="promo-banner.png" alt="Bestify Mobile Kolavi — Your Mobile, Our Priority">
         </div>
 
-        <!-- Auto-rotating social card (YouTube / WhatsApp — real links) -->
+        <!-- Auto-rotating social card (YouTube / Instagram / Facebook — real links + real logos) -->
         <div class="social-rotator" id="socialRotator">
             <a href="https://youtube.com/@bestifymobilekolavi" target="_blank" rel="noopener" class="yt-card social-slide active">
                 <div class="yt-left">
-                    <span class="yt-icon" style="background:#ff0000;">▶</span>
+                    <span class="yt-icon" style="background:#ff0000;"><i class="fa-brands fa-youtube"></i></span>
                     <div class="yt-text">
                         <div>Subscribe on YouTube</div>
                         <div>Product unboxing &amp; reviews</div>
@@ -39,16 +45,35 @@
                 </div>
                 <span>›</span>
             </a>
-            <a href="https://chat.whatsapp.com/Cks7jxkxJJKGBnepHs8U5j" target="_blank" rel="noopener" class="yt-card social-slide">
+            <a href="https://www.instagram.com/bestify_mobile_kolavi" target="_blank" rel="noopener" class="yt-card social-slide">
                 <div class="yt-left">
-                    <span class="yt-icon" style="background:#25d366;">🟢</span>
+                    <span class="yt-icon" style="background:#e1306c;"><i class="fa-brands fa-instagram"></i></span>
                     <div class="yt-text">
-                        <div>Join WhatsApp Community</div>
-                        <div>Get daily new stock updates</div>
+                        <div>Follow on Instagram</div>
+                        <div>Watch latest product videos &amp; reels</div>
                     </div>
                 </div>
                 <span>›</span>
             </a>
+            <a href="https://www.facebook.com/bestifymobilekolavi?mibextid=ZbWKwL" target="_blank" rel="noopener" class="yt-card social-slide">
+                <div class="yt-left">
+                    <span class="yt-icon" style="background:#1877f2;"><i class="fa-brands fa-facebook-f"></i></span>
+                    <div class="yt-text">
+                        <div>Like us on Facebook</div>
+                        <div>Offers, updates &amp; more</div>
+                    </div>
+                </div>
+                <span>›</span>
+            </a>
+        </div>
+
+        <!-- Shop photos (About) — horizontal scroll -->
+        <div class="about-shop-section">
+            <h2 class="section-title" style="margin-top:0;">🏪 About Our Shop</h2>
+            <div class="shop-gallery-scroll" id="shopGalleryScroll">
+                <img src="shop-front.jpg" alt="Bestify Mobile Kolavi — shop front">
+                <img src="shop-street.jpg" alt="Bestify Mobile Kolavi — street view">
+            </div>
         </div>
 
         <!-- Search -->

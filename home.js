@@ -725,3 +725,24 @@ onAuthStateChanged(auth, async (user) => {
     slides[current].classList.add("active");
   }, 4000);
 })();
+
+/* =========================
+   Delivery pincode line — display only, not a real
+   serviceability check. Just remembers what the customer typed.
+========================= */
+(function () {
+  const label = document.getElementById("deliveryPincode");
+  const editBtn = document.getElementById("editPincodeBtn");
+  if (!label || !editBtn) return;
+
+  const saved = localStorage.getItem("bf_delivery_pincode");
+  if (saved) label.textContent = saved;
+
+  editBtn.addEventListener("click", () => {
+    const value = prompt("Enter your delivery pincode:", label.textContent.trim());
+    if (value && value.trim()) {
+      label.textContent = value.trim();
+      localStorage.setItem("bf_delivery_pincode", value.trim());
+    }
+  });
+})();

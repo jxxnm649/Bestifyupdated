@@ -40,9 +40,52 @@ body{
 }
 .shop-photo-box img{
     width: 100%;
-    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
     display: block;
     background: var(--paper-dim);
+}
+
+.delivery-line{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    padding: 8px 2px;
+}
+.delivery-line strong{ color: var(--ink); }
+.delivery-line button{
+    width: auto;
+    margin: 0;
+    background: none;
+    border: none;
+    color: var(--marigold-deep);
+    font-weight: 700;
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.about-shop-section{ margin: 14px 0 4px; }
+.shop-gallery-scroll{
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+}
+.shop-gallery-scroll::-webkit-scrollbar{ display: none; }
+.shop-gallery-scroll img{
+    width: 140px;
+    height: 100px;
+    min-width: 140px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--paper-dim);
+    flex-shrink: 0;
 }
 
 .find-fit-btn{
