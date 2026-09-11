@@ -105,7 +105,7 @@ function renderOrderCard(order) {
   const canPayNow = isCOD && ["Pending", "Confirmed", "Packed"].includes(order.status);
 
   return `
-    <div class="card order-card-item" data-type="${isCOD ? "cod" : "paid"}" data-status="${statusSlug(order.status)}" onclick="toggleDetails(this)">
+    <div class="card order-card-item" data-type="${isCOD ? "cod" : "paid"}" data-status="${statusSlug(order.status)}" data-real-status="${escapeHtml(order.status || "")}" onclick="toggleDetails(this)">
 
       <div class="order-meta-header">
         <span class="order-date-text">📅 Ordered on: ${formatDate(order.createdAt)}</span>
@@ -247,5 +247,33 @@ window.payNow = async function (orderId) {
     alert(error.message || "Could not start payment. Please try again.");
     if (btn) { btn.disabled = false; btn.textContent = "⚡ PAY NOW"; }
   }
+
+};
+
+/* ---------- Real Status filter (bottom sheet) ---------- */
+window.applyStatusFilter = function () {
+
+  const checked = document.querySelector('input[name="statusFilter"]:checked');
+  const value = checked ? checked.value : "All";
+
+  document.querySelectorAll(".order-card-item").forEach(card => {
+    const matches = value === "All" || card.dataset.realStatus === value;
+    card.style.display = matches ? "block" : "none";
+  });
+
+  document.getElementById("filterModal").classList.remove("active");
+
+};
+
+window.clearStatusFilter = function () {
+
+  const allRadio = document.querySelector('input[name="statusFilter"][value="All"]');
+  if (allRadio) allRadio.checked = true;
+
+  document.querySelectorAll(".order-card-item").forEach(card => {
+    card.style.display = "block";
+  });
+
+  document.getElementById("filterModal").classList.remove("active");
 
 };

@@ -45,35 +45,47 @@
 
     <!-- Filter Drawer Popup (Meesho Style) -->
     <div class="filter-modal-overlay" id="filterModal">
-        <div class="filter-drawer">
-            <div>
-                <div class="filter-header">
-                    <span>Filters</span>
-                    <span style="cursor: pointer;" onclick="closeFilterDrawer()">&times;</span>
-                </div>
+        <div class="filter-sheet">
 
-                <div class="filter-group">
-                    <div class="filter-title">Payment Mode</div>
-                    <div class="filter-options">
-                        <button class="filter-option-btn selected" onclick="toggleFilterOpt(this)">All</button>
-                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Cash on Delivery</button>
-                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Prepaid / Online</button>
-                    </div>
-                </div>
+            <div class="filter-sheet-header">
+                <span>FILTER BY</span>
+                <span style="cursor: pointer;" onclick="closeFilterDrawer()">&times;</span>
+            </div>
 
-                <div class="filter-group">
-                    <div class="filter-title">Order Status</div>
-                    <div class="filter-options">
-                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Processing</button>
-                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Shipped</button>
-                        <button class="filter-option-btn" onclick="toggleFilterOpt(this)">Delivered</button>
-                    </div>
+            <div class="filter-sheet-body">
+                <div class="filter-title">Status</div>
+                <div class="filter-options-list" id="statusOptionsList">
+                    <label class="filter-radio-row">
+                        <input type="radio" name="statusFilter" value="All" checked>
+                        <span class="filter-radio-circle"></span>
+                        All
+                    </label>
+                    <label class="filter-radio-row">
+                        <input type="radio" name="statusFilter" value="Pending">
+                        <span class="filter-radio-circle"></span>
+                        Pending
+                    </label>
+                    <label class="filter-radio-row">
+                        <input type="radio" name="statusFilter" value="Shipped">
+                        <span class="filter-radio-circle"></span>
+                        Shipped
+                    </label>
+                    <label class="filter-radio-row">
+                        <input type="radio" name="statusFilter" value="Delivered">
+                        <span class="filter-radio-circle"></span>
+                        Delivered
+                    </label>
+                    <label class="filter-radio-row">
+                        <input type="radio" name="statusFilter" value="Cancelled">
+                        <span class="filter-radio-circle"></span>
+                        Cancelled
+                    </label>
                 </div>
             </div>
 
             <div class="filter-actions">
-                <button class="btn-reset-filter" onclick="closeFilterDrawer()">Reset</button>
-                <button class="btn-apply-filter" onclick="closeFilterDrawer()">Apply Filters</button>
+                <button class="btn-reset-filter" onclick="clearStatusFilter()">Clear</button>
+                <button class="btn-apply-filter" onclick="applyStatusFilter()">Apply</button>
             </div>
         </div>
     </div>
@@ -139,10 +151,6 @@
 
         function closeFilterDrawer() {
             document.getElementById('filterModal').classList.remove('active');
-        }
-
-        function toggleFilterOpt(btn) {
-            btn.classList.toggle('selected');
         }
 
         /*
