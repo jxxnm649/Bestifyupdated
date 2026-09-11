@@ -1,6 +1,7 @@
 body{
     padding-bottom: 84px;
     background: #ffffff !important;
+    overflow-x: hidden;
 }
 
 .container{
