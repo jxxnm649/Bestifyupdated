@@ -11,6 +11,15 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
+import {
+  getFunctions,
+  httpsCallable
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-functions.js";
+
+const functions = getFunctions();
+const createRazorpayOrder = httpsCallable(functions, "createRazorpayOrder");
+const payExistingOrderOnline = httpsCallable(functions, "payExistingOrderOnline");
+
 const ordersContainer = document.getElementById("ordersContainer");
 
 let allOrders = [];
@@ -93,6 +102,7 @@ function renderOrderCard(order) {
   const isCOD = order.paymentMethod === "cod";
   const variantBits = [firstProduct.selectedSize, firstProduct.selectedColour].filter(Boolean).join(", ");
   const hasCashback = order.cashbackAmount > 0;
+  const canPayNow = isCOD && ["Pending", "Confirmed", "Packed"].includes(order.status);
 
   return `
     <div class="card order-card-item" data-type="${isCOD ? "cod" : "paid"}" data-status="${statusSlug(order.status)}" onclick="toggleDetails(this)">
@@ -112,6 +122,7 @@ function renderOrderCard(order) {
       </div>
 
       <div class="order-actions" onclick="event.stopPropagation()">
+        ${canPayNow ? `<button class="btn-action btn-pay-now" onclick="payNow('${order.id}')">⚡ PAY NOW</button>` : ""}
         ${hasCashback ? `<button class="btn-action btn-cashback" onclick="openScratchCard('${order.id}')">🎁 View Cashback</button>` : ""}
         <button class="btn-action" onclick="shareOrder('${order.id}')">🔗 Share</button>
         <button class="btn-action" onclick="trackOrder('${order.id}')">🚚 Track Order</button>
@@ -182,4 +193,59 @@ window.openScratchCard = function (orderId) {
 
 window.closeScratchCard = function () {
   document.getElementById("scratchModal").classList.remove("active");
+};
+
+/* ---------- Real Pay Now (COD -> online, server-verified) ---------- */
+window.payNow = async function (orderId) {
+
+  const order = allOrders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const btn = document.querySelector(`[onclick="payNow('${orderId}')"]`);
+  if (btn) { btn.disabled = true; btn.textContent = "Starting Payment..."; }
+
+  try {
+
+    const { data } = await createRazorpayOrder({ amount: order.total });
+
+    const options = {
+      key: data.keyId,
+      order_id: data.orderId,
+      amount: data.amount,
+      currency: data.currency,
+      name: "Bestify Store",
+      description: `Order #${order.orderNumber || orderId.slice(0, 8)}`,
+      handler: async function (response) {
+        try {
+          await payExistingOrderOnline({
+            orderId,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature
+          });
+          alert("Payment successful! This order is now marked as paid online.");
+          window.location.reload();
+        } catch (error) {
+          console.error(error);
+          window.location.href = "payment-failed.html";
+        }
+      },
+      modal: {
+        ondismiss: function () {
+          if (btn) { btn.disabled = false; btn.textContent = "⚡ PAY NOW"; }
+        }
+      },
+      theme: { color: "#9c27b0" }
+    };
+
+    const rzp = new Razorpay(options);
+    rzp.on("payment.failed", () => { window.location.href = "payment-failed.html"; });
+    rzp.open();
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Could not start payment. Please try again.");
+    if (btn) { btn.disabled = false; btn.textContent = "⚡ PAY NOW"; }
+  }
+
 };

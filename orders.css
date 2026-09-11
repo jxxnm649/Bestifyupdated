@@ -94,6 +94,8 @@ body {
 }
 
 .filter-btn {
+    width: auto;
+    margin: 0;
     background: #fff;
     border: 1.5px solid #9c27b0;
     color: #9c27b0;
@@ -253,7 +255,14 @@ body {
     display: none; 
 }
 
+/* width/margin explicitly reset here: theme.css has a global
+   "button{width:100%}" rule that .btn-action never overrode, so only
+   the first action button filled the whole row and pushed the rest
+   out of view. Same fix as .product-thumb above — necessary, not a
+   design change. */
 .btn-action {
+    width: auto;
+    margin: 0;
     background: #ffffff;
     border: 1px solid #d1d5db;
     color: #333;
@@ -276,6 +285,8 @@ body {
 }
 
 .btn-pay-now {
+    width: auto;
+    margin: 0;
     background: #9c27b0;
     color: #ffffff;
     border: none;
@@ -363,6 +374,8 @@ body {
 }
 
 .filter-option-btn {
+    width: auto;
+    margin: 0;
     padding: 6px 12px;
     border-radius: 6px;
     border: 1px solid #ddd;
@@ -396,6 +409,8 @@ body {
 }
 
 .btn-reset-filter {
+    width: auto;
+    margin: 0;
     background: #f0f0f0;
     border: none;
     padding: 10px 14px;
@@ -431,6 +446,8 @@ body {
 }
 
 .close-modal-btn {
+    width: auto;
+    margin: 0;
     position: absolute;
     top: 10px; right: 12px;
     border: none;

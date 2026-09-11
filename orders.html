@@ -7,6 +7,7 @@
     <title>My Orders</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="orders.css">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 
@@ -145,14 +146,14 @@
         }
 
         /*
-          NOTE: shareOrder, trackOrder and openScratchCard/closeScratchCard
-          are defined in orders.js (as real, data-backed versions) instead
-          of here, since they need access to each order's real Firestore
-          data (real cashback amount/status, real order id for tracking).
-          There is no "payNow" here anymore — a placed order (COD or
-          already paid online) has no real "pay again" step, so a fake
-          "Redirecting to Payment Gateway" alert was removed rather than
-          shipped as a dead button.
+          NOTE: shareOrder, trackOrder, payNow and
+          openScratchCard/closeScratchCard are all defined in
+          orders.js (as real, data-backed versions) instead of here,
+          since they need access to each order's real Firestore data
+          (real cashback amount/status, real order id for tracking,
+          real Razorpay payment for payNow — server-verified via
+          Cloud Functions, only shown for COD orders that haven't
+          shipped yet).
         */
     </script>
 </body>
