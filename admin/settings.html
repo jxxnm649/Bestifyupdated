@@ -122,6 +122,27 @@
           </div>
 
 
+          <!-- Home Page Banner -->
+          <div class="bf-card" style="padding:20px;">
+
+            <h2 style="font-size:16px; margin:0 0 14px;">Home Page Banner</h2>
+            <div style="font-size:12px;opacity:.65;margin-bottom:12px;">Shown at the top of the home page. Landscape photo works best (16:9).</div>
+
+            <div id="bannerPreviewWrap" style="margin-bottom:12px; display:none;">
+              <img id="bannerPreviewImg" src="" alt="Current banner" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:8px; border:1px solid var(--line);">
+            </div>
+
+            <div class="bf-field">
+              <label class="bf-label">Upload New Banner</label>
+              <input type="file" id="bannerFile" accept="image/*">
+            </div>
+
+            <button type="button" id="uploadBannerBtn" class="bf-btn bf-btn-primary" style="width:auto;">Upload Banner</button>
+            <span id="bannerUploadStatus" style="font-size:12px; margin-left:10px;"></span>
+
+          </div>
+
+
           <!-- Shipping & Tax -->
           <div class="bf-card" style="padding:20px;">
 
