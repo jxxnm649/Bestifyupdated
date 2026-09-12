@@ -14,732 +14,60 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-import {
-  openModal,
-  closeModal,
-  showToast
-} from "../design-system.js";
-
+import { showToast as designShowToast } from "../design-system.js";
 import { logAdminAction } from "./audit.js";
 
-import { nextSequenceNumber } from "../counters.js";
+/* =========================
+   STATE
+========================= */
 
+let products = [];              // real products, loaded from Firestore
+let variantFormRows = [];       // [{id, color, price, mrp, stock, file, previewUrl}]
+let baseImageSlots = [null, null, null, null]; // {file, previewUrl} or null, per slot
 
-const form = document.getElementById("productForm");
-const productsList = document.getElementById("productsList");
-const productCount = document.getElementById("productCount");
-const productSearch = document.getElementById("productSearch");
-const productStatusFilter = document.getElementById("productStatusFilter");
+/* =========================
+   DOM
+========================= */
 
-const imageFile = document.getElementById("imageFile");
-const previewRow = document.getElementById("previewRow");
-const imageCountLabel = document.getElementById("imageCountLabel");
+const tabInventoryBtn = document.getElementById("tabInventoryBtn");
+const tabUploadBtn = document.getElementById("tabUploadBtn");
+const viewInventory = document.getElementById("view-inventory");
+const viewUpload = document.getElementById("view-upload");
+
+const inventorySearch = document.getElementById("inventory-search");
+const filterCategory = document.getElementById("filter-category");
+const filterStatus = document.getElementById("filter-status");
+const inventoryListContainer = document.getElementById("inventory-list-container");
+const emptyState = document.getElementById("empty-state");
+
+const productForm = document.getElementById("product-form");
+const baseImageSlotsContainer = document.getElementById("base-image-slots");
+const addVariantBtn = document.getElementById("addVariantBtn");
+const variantRowsContainer = document.getElementById("variant-rows-container");
+const noVariantsNotice = document.getElementById("no-variants-notice");
+const resetFormBtn = document.getElementById("resetFormBtn");
 const categoryList = document.getElementById("categoryList");
 
-const colorVariantRows = document.getElementById("colorVariantRows");
-const addColorVariantBtn = document.getElementById("addColorVariantBtn");
-let colorVariants = []; // { name, files: File[], existingImages: string[] }
-
-const returnPolicySelect = document.getElementById("returnPolicy");
-const returnPolicyCustom = document.getElementById("returnPolicyCustom");
-const warrantySelect = document.getElementById("warranty");
-const warrantyCustom = document.getElementById("warranty" + "Custom");
-
-function toggleCustomInput(select, input) {
-  input.style.display = select.value === "Custom" ? "block" : "none";
-}
-
-if (returnPolicySelect) {
-  returnPolicySelect.addEventListener("change", () => toggleCustomInput(returnPolicySelect, returnPolicyCustom));
-}
-if (warrantySelect) {
-  warrantySelect.addEventListener("change", () => toggleCustomInput(warrantySelect, warrantyCustom));
-}
-
-const MAX_IMAGES = 8;
-
-const addProductBtn = document.getElementById("addProductBtn");
-const productFormModal = document.getElementById("productFormModal");
-const productFormCloseBtn = document.getElementById("productFormCloseBtn");
-const productFormTitle = document.getElementById("productFormTitle");
-const productFormSubmitBtn = document.getElementById("productFormSubmitBtn");
-
-let editMode = false;
-let editProductId = null;
-let existingImages = [];
-let selectedFiles = [];
-let allProducts = [];
-
-
-/* =========================
-   IMAGE PREVIEW (accumulates up to MAX_IMAGES, doesn't overwrite previous picks)
-========================= */
-
-imageFile.value = "";
-
-imageFile.addEventListener("change", () => {
-
-  const newFiles = Array.from(imageFile.files);
-  const usedSlots = existingImages.length + selectedFiles.length;
-  const remainingSlots = MAX_IMAGES - usedSlots;
-
-  if (newFiles.length > remainingSlots) {
-    showToast(`Max ${MAX_IMAGES} images allowed. Added first ${Math.max(remainingSlots, 0)}.`, "danger");
-  }
-
-  selectedFiles = selectedFiles.concat(newFiles.slice(0, Math.max(remainingSlots, 0)));
-
-  imageFile.value = ""; // allow re-picking without losing earlier selections
-
-  renderPreview();
-
-});
-
-function thumb(src, onRemove) {
-  const wrap = document.createElement("div");
-  wrap.style.position = "relative";
-
-  const img = document.createElement("img");
-  img.src = src;
-  img.width = 120;
-  img.height = 120;
-  img.style.objectFit = "cover";
-  img.style.borderRadius = "10px";
-  wrap.appendChild(img);
-
-  const removeBtn = document.createElement("button");
-  removeBtn.type = "button";
-  removeBtn.textContent = "✕";
-  removeBtn.style.cssText = "position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:#c62828;color:#fff;cursor:pointer;font-size:12px;line-height:1;";
-  removeBtn.addEventListener("click", onRemove);
-  wrap.appendChild(removeBtn);
-
-  return wrap;
-}
-
-function renderPreview() {
-  previewRow.innerHTML = "";
-
-  existingImages.forEach((url, idx) => {
-    previewRow.appendChild(thumb(url, () => {
-      existingImages = existingImages.filter((_, i) => i !== idx);
-      renderPreview();
-    }));
-  });
-
-  selectedFiles.forEach((file, idx) => {
-    previewRow.appendChild(thumb(URL.createObjectURL(file), () => {
-      selectedFiles = selectedFiles.filter((_, i) => i !== idx);
-      renderPreview();
-    }));
-  });
-
-  if (imageCountLabel) {
-    imageCountLabel.textContent = `${existingImages.length + selectedFiles.length}/${MAX_IMAGES}`;
-  }
-}
-
-
-/* =========================
-   MODAL OPEN / CLOSE
-========================= */
-
-function resetForm() {
-  form.reset();
-  document.getElementById("status").value = "Active";
-  if (returnPolicySelect) { returnPolicySelect.value = "7 Days Return"; returnPolicyCustom.value = ""; returnPolicyCustom.style.display = "none"; }
-  if (warrantySelect) { warrantySelect.value = "6 Month Warranty"; warrantyCustom.value = ""; warrantyCustom.style.display = "none"; }
-  previewRow.innerHTML = "";
-  existingImages = [];
-  selectedFiles = [];
-  imageFile.value = "";
-  if (imageCountLabel) imageCountLabel.textContent = `0/${MAX_IMAGES}`;
-  colorVariants = [];
-  renderColorVariantRows();
-  editMode = false;
-  editProductId = null;
-  productFormTitle.textContent = "Add Product";
-  productFormSubmitBtn.textContent = "Save Product";
-}
-
-if (addProductBtn) {
-  addProductBtn.addEventListener("click", () => {
-    resetForm();
-    openModal("productFormModal");
-  });
-}
-
-if (productFormCloseBtn) {
-  productFormCloseBtn.addEventListener("click", () => {
-    closeModal("productFormModal");
-  });
-}
-
-
-/* =========================
-   COLOR VARIANTS — each is a name + its own photo
-========================= */
-
-function renderColorVariantRows() {
-
-  colorVariantRows.innerHTML = colorVariants.map((v, i) => {
-
-    const previewUrls = [
-      ...(v.existingImages || []),
-      ...(v.files || []).map(f => URL.createObjectURL(f))
-    ];
-
-    return `
-    <div class="bf-color-variant-row" style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;position:relative;">
-      <button type="button" class="bf-btn bf-btn-ghost bf-btn-sm" data-variant-remove="${i}" aria-label="Remove row" style="position:absolute;top:8px;right:8px;width:auto;">✕ Remove</button>
-
-      <div style="padding-right:80px;margin-bottom:8px;">
-        <span style="font-size:12px;color:var(--ink-soft);">Color ${i + 1}</span>
-      </div>
-
-      <input type="text" class="bf-input" placeholder="Color name (e.g. Red)" value="${v.name || ""}" data-variant-name="${i}" style="margin-bottom:8px;">
-
-      ${previewUrls.length ? `
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-          ${previewUrls.map((url, photoIdx) => `
-            <div style="position:relative;">
-              <img src="${url}" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--paper-dim);">
-              <button type="button" data-variant-photo-remove="${i}:${photoIdx}" aria-label="Remove photo"
-                style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--bf-danger,#c0392b);color:#fff;border:none;font-size:11px;line-height:1;cursor:pointer;">✕</button>
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-
-      <label class="bf-btn bf-btn-ghost bf-btn-sm" style="display:inline-block;width:auto;cursor:pointer;">
-        + Add Photos (multiple angles)
-        <input type="file" accept="image/*" multiple data-variant-file="${i}" style="display:none;">
-      </label>
-    </div>
-  `;
-  }).join("");
-
-}
-
-if (addColorVariantBtn) {
-  addColorVariantBtn.addEventListener("click", () => {
-    colorVariants.push({ name: "", files: [], existingImages: [] });
-    renderColorVariantRows();
-  });
-}
-
-if (colorVariantRows) {
-  colorVariantRows.addEventListener("input", (e) => {
-    const nameIdx = e.target.dataset.variantName;
-    if (nameIdx !== undefined) colorVariants[Number(nameIdx)].name = e.target.value;
-  });
-
-  // Pressing Enter/Done on a mobile keyboard inside a form field submits
-  // the whole form by default — that was silently saving the product
-  // with an empty colorVariants row before the photos were even picked.
-  colorVariantRows.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && e.target.dataset.variantName !== undefined) {
-      e.preventDefault();
-    }
-  });
-
-  colorVariantRows.addEventListener("change", (e) => {
-    const fileIdx = e.target.dataset.variantFile;
-    if (fileIdx !== undefined && e.target.files.length) {
-      const v = colorVariants[Number(fileIdx)];
-      v.files = [...(v.files || []), ...Array.from(e.target.files)];
-      renderColorVariantRows();
-    }
-  });
-
-  colorVariantRows.addEventListener("click", (e) => {
-
-    const removeBtn = e.target.closest("[data-variant-remove]");
-    if (removeBtn) {
-      colorVariants.splice(Number(removeBtn.dataset.variantRemove), 1);
-      renderColorVariantRows();
-      return;
-    }
-
-    const photoRemoveBtn = e.target.closest("[data-variant-photo-remove]");
-    if (photoRemoveBtn) {
-      const [variantIdx, photoIdx] = photoRemoveBtn.dataset.variantPhotoRemove.split(":").map(Number);
-      const v = colorVariants[variantIdx];
-      const existingCount = (v.existingImages || []).length;
-
-      if (photoIdx < existingCount) {
-        v.existingImages.splice(photoIdx, 1);
-      } else {
-        v.files.splice(photoIdx - existingCount, 1);
-      }
-      renderColorVariantRows();
-    }
-
-  });
-}
-
-async function uploadColorVariants() {
-
-  const result = [];
-  let rowNumber = 0;
-
-  for (const v of colorVariants) {
-
-    rowNumber++;
-    const name = (v.name || "").trim();
-    const hasAnyPhoto = (v.existingImages && v.existingImages.length) || (v.files && v.files.length);
-    if (!name && !hasAnyPhoto) continue; // fully blank row — skip quietly
-
-    const images = [...(v.existingImages || [])];
-
-    for (const file of (v.files || [])) {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "Bestifyimg");
-      const response = await fetch("https://api.cloudinary.com/v1_1/rgksliph/image/upload", { method: "POST", body: formData });
-      const data = await response.json();
-      if (data.secure_url) images.push(data.secure_url);
-    }
-
-    if (!name || images.length === 0) {
-      throw new Error(`Color row ${rowNumber} (${name || "no name yet"}) is missing a ${!name ? "name" : "photo"} — fill it in or tap ✕ to remove that row.`);
-    }
-
-    result.push({ name, image: images[0], images });
-
-  }
-
-  return result;
-
-}
-
-
-/* =========================
-   IMAGE UPLOAD (Cloudinary)
-========================= */
-
-async function uploadImages() {
-
-  if (selectedFiles.length === 0 && existingImages.length === 0) {
-    showToast("Select at least one image", "danger");
-    return null;
-  }
-
-  const uploadedUrls = [];
-
-  for (const file of selectedFiles) {
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "Bestifyimg");
-
-    const response = await fetch(
-      "https://api.cloudinary.com/v1_1/rgksliph/image/upload",
-      {
-        method: "POST",
-        body: formData
-      }
-    );
-
-    const data = await response.json();
-    uploadedUrls.push(data.secure_url);
-
-  }
-
-  // Keep any existing (unremoved) images + newly uploaded ones, capped at MAX_IMAGES
-  return [...existingImages, ...uploadedUrls].slice(0, MAX_IMAGES);
-
-}
-
-
-/* =========================
-   SUBMIT (ADD / UPDATE)
-========================= */
-
-form.addEventListener("submit", async (e) => {
-
-  e.preventDefault();
-
-  productFormSubmitBtn.disabled = true;
-  productFormSubmitBtn.textContent = editMode ? "Updating..." : "Saving...";
-
-  try {
-
-    const imageUrls = await uploadImages();
-
-    if (!imageUrls || imageUrls.length === 0) {
-      productFormSubmitBtn.disabled = false;
-      productFormSubmitBtn.textContent = editMode ? "Update Product" : "Save Product";
-      return;
-    }
-
-    const finalColorVariants = await uploadColorVariants();
-
-    const productData = {
-      image: imageUrls[0],
-      images: imageUrls,
-      productName: document.getElementById("productName").value.trim(),
-      category: document.getElementById("category").value.trim(),
-      mrp: document.getElementById("mrp").value ? Number(document.getElementById("mrp").value) : 0,
-      price: Number(document.getElementById("price").value),
-      stock: Number(document.getElementById("stock").value),
-      description: document.getElementById("description").value.trim(),
-      sizes: document.getElementById("sizes").value
-        ? document.getElementById("sizes").value.split(",").map(s => s.trim()).filter(Boolean)
-        : [],
-      colours: document.getElementById("colours").value
-        ? document.getElementById("colours").value.split(",").map(s => s.trim()).filter(Boolean)
-        : [],
-      colorVariants: finalColorVariants,
-      returnPolicy: document.getElementById("returnPolicy").value === "Custom"
-        ? (document.getElementById("returnPolicyCustom").value.trim() || "7 Days Return")
-        : document.getElementById("returnPolicy").value,
-      warranty: document.getElementById("warranty").value === "Custom"
-        ? (document.getElementById("warrantyCustom").value.trim() || "6 Month Warranty")
-        : document.getElementById("warranty").value,
-      status: document.getElementById("status").value
-    };
-
-    if (editMode) {
-
-      // Admin edits to an EXISTING listing don't need to be re-approved —
-      // approvalStatus (if any) is left untouched by this partial update.
-      await updateDoc(doc(db, "products", editProductId), productData);
-      await logAdminAction("Updated product", "Products", {
-        productId: editProductId,
-        name: productData.productName
-      });
-      showToast("Product updated", "success");
-
-    } else {
-
-      const seq = await nextSequenceNumber("products");
-      productData.productCode = `Bestify${seq}`;
-      // Products admin adds directly are already trusted — live immediately.
-      productData.approvalStatus = "Approved";
-
-      const newDoc = await addDoc(collection(db, "products"), productData);
-      await logAdminAction("Added product", "Products", {
-        productId: newDoc.id,
-        name: productData.productName,
-        productCode: productData.productCode
-      });
-      showToast("Product added", "success");
-
-    }
-
-    closeModal("productFormModal");
-    resetForm();
-    loadProducts();
-
-  } catch (error) {
-
-    console.error("Product save error:", error);
-    showToast(error.message || "Failed to save product.", "danger");
-
-  } finally {
-
-    productFormSubmitBtn.disabled = false;
-    productFormSubmitBtn.textContent = editMode ? "Update Product" : "Save Product";
-
-  }
-
-});
-
-
-/* =========================
-   LOAD & RENDER PRODUCTS
-========================= */
-
-async function loadProducts() {
-
-  try {
-
-    const snapshot = await getDocs(collection(db, "products"));
-
-    allProducts = snapshot.docs.map((docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    }));
-
-    renderProductList();
-
-    if (categoryList) {
-      const seen = new Map();
-      allProducts.forEach((p) => {
-        const raw = (p.category || "").toString().trim();
-        if (raw && !seen.has(raw.toLowerCase())) seen.set(raw.toLowerCase(), raw);
-      });
-      categoryList.innerHTML = [...seen.values()]
-        .map((c) => `<option value="${escapeHtml(c)}"></option>`)
-        .join("");
-    }
-
-  } catch (error) {
-
-    console.error("Products loading error:", error);
-
-    productsList.innerHTML = `
-      <div class="bf-card" style="padding:20px;">
-        ❌ Unable to load products.
-      </div>
-    `;
-
-  }
-
-}
+const salesModal = document.getElementById("sales-modal");
+const editModal = document.getElementById("edit-modal");
+const editForm = document.getElementById("edit-form");
 
 function escapeHtml(str) {
-  if (typeof str !== "string") return str;
-  return str.replace(/[&<>"']/g, m => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  return String(str ?? "").replace(/[&<>"']/g, m => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[m]);
 }
 
-function getFilteredProducts() {
-
-  const term = productSearch.value.trim().toLowerCase();
-  const statusFilter = productStatusFilter.value;
-
-  return allProducts.filter((product) => {
-
-    const name = (product.productName || "").toLowerCase();
-    const category = (product.category || "").toLowerCase();
-    const status = product.status === "Inactive" ? "Inactive" : "Active";
-
-    const matchesTerm = !term || name.includes(term) || category.includes(term);
-    const matchesStatus = statusFilter === "All" || status === statusFilter;
-
-    return matchesTerm && matchesStatus;
-
-  });
-
-}
-
-function renderProductList() {
-
-  const filtered = getFilteredProducts();
-
-  productCount.textContent = `Total Products: ${allProducts.length}`;
-
-  if (!filtered.length) {
-    productsList.innerHTML = `
-      <div class="bf-card" style="padding:20px;">
-        No products found.
-      </div>
-    `;
-    return;
+function showToast(message, type = "info") {
+  try {
+    designShowToast(message, type === "danger" ? "danger" : type === "warning" ? "warning" : type === "success" ? "success" : "info");
+  } catch {
+    alert(message);
   }
-
-  productsList.innerHTML = filtered.map((product) => {
-
-    const status = product.status === "Inactive" ? "Inactive" : "Active";
-    const stock = product.stock ?? 0;
-
-    const stockLabel =
-      stock === 0 ? "Out of Stock" :
-      stock <= 5 ? `${stock} left` :
-      `${stock} in stock`;
-
-    const stockClass =
-      stock === 0 ? "bf-status-danger" :
-      stock <= 5 ? "bf-status-warning" :
-      "bf-status-success";
-
-    const priceHtml =
-      Number(product.mrp) > Number(product.price)
-        ? `<span style="text-decoration:line-through;opacity:.55;font-size:12px;">₹${escapeHtml(String(product.mrp))}</span> <strong>₹${escapeHtml(String(product.price))}</strong>`
-        : `<strong>₹${escapeHtml(String(product.price))}</strong>`;
-
-    return `
-      <div class="bf-card" style="padding:14px; display:flex; flex-direction:column; gap:8px;">
-
-        <img
-          src="${escapeHtml(product.image || "")}"
-          alt="${escapeHtml(product.productName || "")}"
-          style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:10px;">
-
-        <div style="font-weight:700; font-size:15px;">
-          ${escapeHtml(product.productName || "Unnamed product")}
-        </div>
-
-        <div style="font-size:12px; opacity:.7;">
-          ${escapeHtml(product.category || "Uncategorized")}
-        </div>
-
-        <div style="font-size:14px;">
-          ${priceHtml}
-        </div>
-
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <span class="bf-status-pill ${stockClass}">${escapeHtml(stockLabel)}</span>
-          <span class="bf-status-pill ${status === "Active" ? "bf-status-success" : "bf-status-pending"}">${status}</span>
-        </div>
-
-        <div style="display:flex; gap:8px; margin-top:6px;">
-          <button
-            type="button"
-            class="bf-btn bf-btn-ghost bf-btn-sm edit-product-btn"
-            data-id="${escapeHtml(product.id)}"
-            style="flex:1;">
-            ✏️ Edit
-          </button>
-
-          <button
-            type="button"
-            class="bf-btn bf-btn-ghost bf-btn-sm delete-product-btn"
-            data-id="${escapeHtml(product.id)}"
-            data-name="${escapeHtml(product.productName || "this product")}"
-            style="flex:1; color:#c62828;">
-            🗑️ Delete
-          </button>
-        </div>
-
-      </div>
-    `;
-
-  }).join("");
-
 }
-
-if (productSearch) {
-  productSearch.addEventListener("input", renderProductList);
-}
-
-if (productStatusFilter) {
-  productStatusFilter.addEventListener("change", renderProductList);
-}
-
 
 /* =========================
-   EDIT / DELETE
-========================= */
-
-async function editProduct(id) {
-
-  try {
-
-    const productRef = doc(db, "products", id);
-    const productSnap = await getDoc(productRef);
-
-    if (!productSnap.exists()) {
-      showToast("Product not found", "danger");
-      return;
-    }
-
-    const product = productSnap.data();
-
-    existingImages = product.images && product.images.length
-      ? product.images
-      : (product.image ? [product.image] : []);
-
-    selectedFiles = [];
-    imageFile.value = "";
-    renderPreview();
-
-    document.getElementById("productName").value = product.productName || "";
-    document.getElementById("category").value = product.category || "";
-    document.getElementById("mrp").value = product.mrp || "";
-    document.getElementById("price").value = product.price || "";
-    document.getElementById("stock").value = product.stock ?? 0;
-    document.getElementById("description").value = product.description || "";
-    document.getElementById("sizes").value = (product.sizes || []).join(", ");
-    document.getElementById("colours").value = (product.colours || []).join(", ");
-
-    colorVariants = (product.colorVariants || []).map(v => ({
-      name: v.name,
-      files: [],
-      existingImages: Array.isArray(v.images) && v.images.length ? v.images : [v.image].filter(Boolean)
-    }));
-    renderColorVariantRows();
-    document.getElementById("status").value = product.status === "Inactive" ? "Inactive" : "Active";
-
-    const STANDARD_RETURN = ["7 Days Return", "No Return"];
-    const returnVal = product.returnPolicy || "7 Days Return";
-    if (STANDARD_RETURN.includes(returnVal)) {
-      returnPolicySelect.value = returnVal;
-      returnPolicyCustom.style.display = "none";
-      returnPolicyCustom.value = "";
-    } else {
-      returnPolicySelect.value = "Custom";
-      returnPolicyCustom.value = returnVal;
-      returnPolicyCustom.style.display = "block";
-    }
-
-    const STANDARD_WARRANTY = ["6 Month Warranty", "No Warranty"];
-    const warrantyVal = product.warranty || "6 Month Warranty";
-    if (STANDARD_WARRANTY.includes(warrantyVal)) {
-      warrantySelect.value = warrantyVal;
-      warrantyCustom.style.display = "none";
-      warrantyCustom.value = "";
-    } else {
-      warrantySelect.value = "Custom";
-      warrantyCustom.value = warrantyVal;
-      warrantyCustom.style.display = "block";
-    }
-
-    editMode = true;
-    editProductId = id;
-
-    productFormTitle.textContent = "Edit Product";
-    productFormSubmitBtn.textContent = "Update Product";
-
-    openModal("productFormModal");
-
-  } catch (error) {
-
-    console.error("Edit product error:", error);
-    showToast(error.message || "Failed to load product.", "danger");
-
-  }
-
-}
-
-async function deleteProduct(id, name) {
-
-  const ok = window.confirm(`Delete "${name}"? This cannot be undone.`);
-  if (!ok) return;
-
-  try {
-
-    await deleteDoc(doc(db, "products", id));
-
-    await logAdminAction("Deleted product", "Products", { productId: id, name });
-
-    allProducts = allProducts.filter(p => p.id !== id);
-    renderProductList();
-
-    showToast("Product deleted", "success");
-
-  } catch (error) {
-
-    console.error("Delete product error:", error);
-    showToast(error.message || "Failed to delete product.", "danger");
-
-  }
-
-}
-
-if (productsList) {
-  productsList.addEventListener("click", (e) => {
-
-    const editBtn = e.target.closest(".edit-product-btn");
-    if (editBtn) {
-      editProduct(editBtn.dataset.id);
-      return;
-    }
-
-    const deleteBtn = e.target.closest(".delete-product-btn");
-    if (deleteBtn) {
-      deleteProduct(deleteBtn.dataset.id, deleteBtn.dataset.name);
-    }
-
-  });
-}
-
-
-/* =========================
-   APP INIT (ADMIN CHECK)
+   ADMIN AUTH GUARD (same real check used elsewhere)
 ========================= */
 
 onAuthStateChanged(auth, async (user) => {
@@ -750,15 +78,12 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   try {
-
     const userDoc = await getDoc(doc(db, "users", user.uid));
-
     if (!userDoc.exists() || userDoc.data().isAdmin !== true) {
       alert("Access Denied ❌");
       window.location.href = "home.html";
       return;
     }
-
   } catch (error) {
     console.error("Admin check error:", error);
     window.location.href = "home.html";
@@ -768,3 +93,748 @@ onAuthStateChanged(auth, async (user) => {
   loadProducts();
 
 });
+
+
+/* =========================
+   TAB SWITCH
+========================= */
+
+tabInventoryBtn.addEventListener("click", () => switchTab("inventory"));
+tabUploadBtn.addEventListener("click", () => switchTab("upload"));
+
+function switchTab(tab) {
+  if (tab === "upload") {
+    viewUpload.classList.remove("hidden");
+    viewInventory.classList.add("hidden");
+    tabUploadBtn.className = "px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white";
+    tabInventoryBtn.className = "px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600";
+  } else {
+    viewInventory.classList.remove("hidden");
+    viewUpload.classList.add("hidden");
+    tabInventoryBtn.className = "px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white";
+    tabUploadBtn.className = "px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600";
+    renderInventory();
+  }
+}
+
+
+/* =========================
+   LOAD REAL PRODUCTS
+========================= */
+
+async function loadProducts() {
+
+  inventoryListContainer.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm">Loading products…</div>`;
+
+  try {
+
+    const snap = await getDocs(collection(db, "products"));
+    products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    populateCategoryOptions();
+    renderInventory();
+
+  } catch (error) {
+    console.error(error);
+    inventoryListContainer.innerHTML = `
+      <div class="text-center py-10">
+        <p class="text-sm text-red-600">❌ Couldn't load products: ${escapeHtml(error.message || "")}</p>
+        <button type="button" id="retryLoadBtn" class="mt-3 px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold">Retry</button>
+      </div>`;
+    document.getElementById("retryLoadBtn")?.addEventListener("click", loadProducts);
+  }
+
+}
+
+function populateCategoryOptions() {
+
+  const categories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+
+  filterCategory.innerHTML = `<option value="ALL">All Categories</option>` +
+    categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+
+  categoryList.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">`).join("");
+
+}
+
+
+/* =========================
+   BASE IMAGE SLOTS (Add Product form)
+========================= */
+
+function renderBaseImageSlots() {
+
+  baseImageSlotsContainer.innerHTML = baseImageSlots.map((slot, i) => `
+    <div class="relative cursor-pointer group border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-xl h-24 flex flex-col items-center justify-center bg-slate-50 transition overflow-hidden" data-base-slot="${i}">
+      ${slot ? `
+        <img src="${slot.previewUrl}" class="w-full h-full object-cover rounded-xl">
+        <button type="button" data-remove-base="${i}" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center">✕</button>
+      ` : `
+        <div class="text-center p-2">
+          <i class="fa-solid fa-cloud-arrow-up text-slate-400 group-hover:text-brand-600 mb-1"></i>
+          <span class="block text-[11px] text-slate-500">Base Image ${i + 1}</span>
+        </div>
+      `}
+      <input type="file" accept="image/*" class="hidden" data-base-file="${i}">
+    </div>
+  `).join("");
+
+}
+
+baseImageSlotsContainer.addEventListener("click", (e) => {
+
+  const removeBtn = e.target.closest("[data-remove-base]");
+  if (removeBtn) {
+    baseImageSlots[Number(removeBtn.dataset.removeBase)] = null;
+    renderBaseImageSlots();
+    return;
+  }
+
+  const slot = e.target.closest("[data-base-slot]");
+  if (slot) {
+    slot.querySelector("[data-base-file]").click();
+  }
+
+});
+
+baseImageSlotsContainer.addEventListener("change", (e) => {
+
+  const fileInput = e.target.closest("[data-base-file]");
+  if (!fileInput || !fileInput.files[0]) return;
+
+  const index = Number(fileInput.dataset.baseFile);
+  const file = fileInput.files[0];
+  baseImageSlots[index] = { file, previewUrl: URL.createObjectURL(file) };
+  renderBaseImageSlots();
+
+});
+
+
+/* =========================
+   COLOR VARIANT ROWS (Add Product form)
+========================= */
+
+addVariantBtn.addEventListener("click", () => {
+  variantFormRows.push({ id: "var-" + Date.now() + "-" + Math.floor(Math.random() * 1000), color: "", price: "", mrp: "", stock: 10, file: null, previewUrl: "" });
+  renderVariantRows();
+});
+
+function renderVariantRows() {
+
+  if (variantFormRows.length === 0) {
+    variantRowsContainer.innerHTML = "";
+    noVariantsNotice.classList.remove("hidden");
+    return;
+  }
+  noVariantsNotice.classList.add("hidden");
+
+  variantRowsContainer.innerHTML = variantFormRows.map((row, index) => `
+    <div class="bg-slate-50 border border-slate-300 rounded-2xl p-4 shadow-sm relative">
+      <div class="flex items-center justify-between border-b border-slate-200/80 pb-2 mb-3">
+        <span class="text-xs font-bold text-brand-700 uppercase tracking-wider flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-brand-600 text-white inline-flex items-center justify-center text-[10px] font-black">${index + 1}</span>
+          Color Variant #${index + 1}
+        </span>
+        <button type="button" data-remove-variant="${row.id}" class="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg">
+          <i class="fa-solid fa-trash-can"></i> Remove
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+
+        <div class="md:col-span-3">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Color Variant Photo</label>
+          <div data-variant-photo-slot="${row.id}" class="relative cursor-pointer group border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-xl h-24 flex flex-col items-center justify-center bg-white transition overflow-hidden">
+            ${row.previewUrl ? `<img src="${row.previewUrl}" class="w-full h-full object-cover rounded-xl">` : `
+              <div class="text-center p-2">
+                <i class="fa-solid fa-camera text-brand-500 text-xl mb-1"></i>
+                <span class="block text-[11px] text-slate-500 font-medium">Upload Image</span>
+              </div>
+            `}
+            <input type="file" accept="image/*" class="hidden" data-variant-file="${row.id}">
+          </div>
+        </div>
+
+        <div class="md:col-span-9 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Color Name *</label>
+            <input type="text" required value="${escapeHtml(row.color)}" data-variant-field="color" data-variant-id="${row.id}"
+              placeholder="e.g. Matte Black" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Price (₹) *</label>
+            <input type="number" step="0.01" required value="${row.price}" data-variant-field="price" data-variant-id="${row.id}"
+              placeholder="e.g. 999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">MRP (₹) *</label>
+            <input type="number" step="0.01" required value="${row.mrp}" data-variant-field="mrp" data-variant-id="${row.id}"
+              placeholder="e.g. 1499" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Stock *</label>
+            <input type="number" min="0" required value="${row.stock}" data-variant-field="stock" data-variant-id="${row.id}"
+              placeholder="10" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800">
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `).join("");
+
+}
+
+variantRowsContainer.addEventListener("click", (e) => {
+
+  const removeBtn = e.target.closest("[data-remove-variant]");
+  if (removeBtn) {
+    variantFormRows = variantFormRows.filter(r => r.id !== removeBtn.dataset.removeVariant);
+    renderVariantRows();
+    return;
+  }
+
+  const photoSlot = e.target.closest("[data-variant-photo-slot]");
+  if (photoSlot) {
+    photoSlot.querySelector("[data-variant-file]").click();
+  }
+
+});
+
+variantRowsContainer.addEventListener("change", (e) => {
+
+  const fileInput = e.target.closest("[data-variant-file]");
+  if (fileInput && fileInput.files[0]) {
+    const row = variantFormRows.find(r => r.id === fileInput.dataset.variantFile);
+    if (row) {
+      row.file = fileInput.files[0];
+      row.previewUrl = URL.createObjectURL(row.file);
+      renderVariantRows();
+    }
+    return;
+  }
+
+  const field = e.target.closest("[data-variant-field]");
+  if (field) {
+    const row = variantFormRows.find(r => r.id === field.dataset.variantId);
+    if (row) row[field.dataset.variantField] = field.value;
+  }
+
+});
+
+
+/* =========================
+   RESET FORM
+========================= */
+
+resetFormBtn.addEventListener("click", resetProductForm);
+
+function resetProductForm() {
+  productForm.reset();
+  baseImageSlots = [null, null, null, null];
+  variantFormRows = [];
+  renderBaseImageSlots();
+  renderVariantRows();
+}
+
+
+/* =========================
+   REAL CLOUDINARY UPLOAD
+========================= */
+
+async function uploadToCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "Bestifyimg");
+  const response = await fetch("https://api.cloudinary.com/v1_1/rgksliph/image/upload", { method: "POST", body: formData });
+  const data = await response.json();
+  if (!data.secure_url) throw new Error("Image upload failed. Please try again.");
+  return data.secure_url;
+}
+
+
+/* =========================
+   SUBMIT — SAVE PRODUCT + VARIANTS (real Firestore)
+========================= */
+
+productForm.addEventListener("submit", async (e) => {
+
+  e.preventDefault();
+
+  const submitBtn = document.getElementById("submitProductBtn");
+
+  if (variantFormRows.length === 0) {
+    showToast("Add at least one color variant — it holds the price and stock.", "danger");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Saving...";
+
+  try {
+
+    const baseImageUrls = [];
+    for (const slot of baseImageSlots) {
+      if (slot?.file) baseImageUrls.push(await uploadToCloudinary(slot.file));
+    }
+
+    const title = document.getElementById("form-title").value.trim();
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+
+    const colorVariants = [];
+    for (let i = 0; i < variantFormRows.length; i++) {
+
+      const row = variantFormRows[i];
+      const colorName = (row.color || "").trim();
+      const price = parseFloat(row.price);
+      const mrp = parseFloat(row.mrp);
+      const stock = parseInt(row.stock, 10);
+
+      if (!colorName || isNaN(price) || isNaN(mrp) || isNaN(stock)) {
+        throw new Error(`Color variant ${i + 1} is missing a name, price, MRP, or stock value.`);
+      }
+
+      let variantImage = baseImageUrls[0] || "";
+      if (row.file) variantImage = await uploadToCloudinary(row.file);
+
+      if (!variantImage) {
+        throw new Error(`Color variant ${i + 1} ("${colorName}") needs a photo — either its own, or at least one Base Image.`);
+      }
+
+      colorVariants.push({
+        color: colorName,
+        image: variantImage,
+        price,
+        mrp,
+        stock,
+        skuId: `SKU-${title.slice(0, 3).toUpperCase()}-${colorName.slice(0, 3).toUpperCase()}-${randomCode + i}`,
+        totalSalesCount: 0,
+        totalRevenue: 0
+      });
+
+    }
+
+    const activeVariant = colorVariants[0];
+
+    const productData = {
+      productName: title,
+      category: document.getElementById("form-category").value.trim(),
+      description: document.getElementById("form-description").value.trim(),
+      warranty: document.getElementById("form-warranty").value.trim(),
+      returnPolicy: document.getElementById("form-return-policy").value.trim() || "7 Days Return",
+      sizeWeight: document.getElementById("form-sizeweight").value.trim(),
+      manufacturer: document.getElementById("form-manufacturer").value.trim(),
+      productDetails: document.getElementById("form-details").value.trim(),
+      images: baseImageUrls.length ? baseImageUrls : [activeVariant.image],
+      image: baseImageUrls[0] || activeVariant.image,
+      colorVariants,
+      activeVariantIndex: 0,
+      price: activeVariant.price,
+      mrp: activeVariant.mrp,
+      stock: activeVariant.stock,
+      status: "Active",
+      createdAt: new Date()
+    };
+
+    const newDoc = await addDoc(collection(db, "products"), productData);
+
+    await logAdminAction("Added product (Inventory Management)", "Products", {
+      productId: newDoc.id,
+      name: productData.productName,
+      variantCount: colorVariants.length
+    });
+
+    showToast("Product and variants saved!", "success");
+    resetProductForm();
+    await loadProducts();
+    switchTab("inventory");
+
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Failed to save product.", "danger");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `<span>Save Product &amp; Variants</span> <i class="fa-solid fa-arrow-right"></i>`;
+  }
+
+});
+
+
+/* =========================
+   RENDER INVENTORY LIST (real data)
+========================= */
+
+const viewingIndex = {};
+
+inventorySearch.addEventListener("input", renderInventory);
+filterCategory.addEventListener("change", renderInventory);
+filterStatus.addEventListener("change", renderInventory);
+
+function renderInventory() {
+
+  const term = inventorySearch.value.toLowerCase();
+  const category = filterCategory.value;
+  const status = filterStatus.value;
+
+  const filtered = products.filter(item => {
+
+    const variants = item.colorVariants || [];
+    const matchesSearch = !term ||
+      (item.productName || "").toLowerCase().includes(term) ||
+      (item.category || "").toLowerCase().includes(term) ||
+      variants.some(v => (v.color || "").toLowerCase().includes(term) || (v.skuId || "").toLowerCase().includes(term));
+
+    const matchesCategory = category === "ALL" || item.category === category;
+    const matchesStatus = status === "ALL" || (item.status || "Active") === status;
+
+    return matchesSearch && matchesCategory && matchesStatus;
+
+  });
+
+  if (filtered.length === 0) {
+    inventoryListContainer.innerHTML = "";
+    emptyState.classList.remove("hidden");
+    return;
+  }
+  emptyState.classList.add("hidden");
+
+  inventoryListContainer.innerHTML = filtered.map(item => {
+
+    const variants = item.colorVariants || [];
+    const isInactive = item.status === "Inactive";
+    const activeIndex = viewingIndex[item.id] ?? item.activeVariantIndex ?? 0;
+    const activeVar = variants[activeIndex] || variants[0] || { color: "Default", image: item.image, price: item.price, mrp: item.mrp, stock: item.stock, skuId: "—" };
+
+    return `
+    <div class="bg-white rounded-xl border ${isInactive ? "border-amber-200 bg-amber-50/20" : "border-slate-200"} p-3 shadow-sm">
+
+      <div class="flex items-start gap-3">
+        <div class="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+          <img src="${escapeHtml(activeVar.image || "")}" alt="${escapeHtml(item.productName)}" class="w-full h-full object-cover">
+          <span class="absolute bottom-0.5 left-0.5 bg-slate-900/80 text-white text-[9px] font-medium px-1.5 py-0.2 rounded max-w-[90%] truncate">${escapeHtml(activeVar.color)}</span>
+          ${isInactive ? '<span class="absolute inset-0 bg-slate-900/60 text-white text-[9px] font-bold flex items-center justify-center">INACTIVE</span>' : ""}
+        </div>
+
+        <div class="flex-1 min-w-0 space-y-0.5">
+          <div class="flex items-center justify-between gap-1">
+            <h4 class="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate">${escapeHtml(item.productName)}</h4>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${isInactive ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}">${item.status || "Active"}</span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-0 text-[11px] font-mono text-slate-500">
+            <span><span class="text-slate-400 font-sans">Category:</span> ${escapeHtml(item.category || "—")}</span>
+            <span><span class="text-slate-400 font-sans">SKU:</span> ${escapeHtml(activeVar.skuId || "—")}</span>
+          </div>
+
+          <div class="pt-1 flex items-center gap-1 overflow-x-auto">
+            <span class="text-[10px] font-semibold text-slate-400 mr-0.5 flex-shrink-0">Colors:</span>
+            ${variants.map((v, vIdx) => `
+              <button type="button" data-select-variant="${item.id}:${vIdx}"
+                class="px-2 py-0.5 rounded-md text-[11px] font-medium transition border flex items-center gap-1 flex-shrink-0 ${vIdx === activeIndex ? "bg-brand-600 text-white border-brand-600" : "bg-slate-50 text-slate-700 border-slate-200"}">
+                <span>${escapeHtml(v.color)}</span><span class="text-[9px] opacity-80">(₹${v.price})</span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-[10px] text-slate-400 font-medium">Rate:</span>
+          <b class="text-emerald-700 text-sm font-black">₹${Number(activeVar.price || 0).toFixed(2)}</b>
+          <span class="text-slate-400 line-through text-[10px]">₹${Number(activeVar.mrp || 0).toFixed(2)}</span>
+        </div>
+
+        <div class="flex items-center gap-2 ml-auto">
+
+          <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
+            <button type="button" data-stock-adjust="${item.id}:${activeIndex}:-1" class="w-5 h-5 rounded bg-white border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-xs">-</button>
+            <span class="w-7 text-center font-bold text-slate-900 text-xs">${activeVar.stock}</span>
+            <button type="button" data-stock-adjust="${item.id}:${activeIndex}:1" class="w-5 h-5 rounded bg-white border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-xs">+</button>
+          </div>
+
+          <button type="button" data-edit="${item.id}:${activeIndex}" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-pen text-[10px]"></i> <span class="hidden sm:inline">Edit</span>
+          </button>
+
+          <div class="relative group">
+            <button type="button" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold flex items-center gap-1">
+              <span>More</span> <i class="fa-solid fa-chevron-down text-[9px]"></i>
+            </button>
+            <div class="absolute right-0 bottom-full mb-1 w-44 bg-white rounded-xl shadow-xl border border-slate-100 hidden group-hover:block z-30 py-1">
+              <button type="button" data-toggle-pause="${item.id}" class="w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium">
+                <i class="fa-solid ${isInactive ? "fa-play text-emerald-600" : "fa-pause text-amber-600"} w-3.5"></i>
+                ${isInactive ? "Set Active" : "Set Inactive"}
+              </button>
+              <button type="button" data-sales="${item.id}:${activeIndex}" class="w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-chart-pie text-brand-600 w-3.5"></i> Total Sale Metrics
+              </button>
+              <div class="border-t border-slate-100 my-1"></div>
+              <button type="button" data-delete="${item.id}" class="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-trash-can w-3.5"></i> Delete Product
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    `;
+
+  }).join("");
+
+}
+
+inventoryListContainer.addEventListener("click", async (e) => {
+
+  const selectBtn = e.target.closest("[data-select-variant]");
+  if (selectBtn) {
+    const [productId, vIdx] = selectBtn.dataset.selectVariant.split(":");
+    viewingIndex[productId] = Number(vIdx);
+    renderInventory();
+    return;
+  }
+
+  const stockBtn = e.target.closest("[data-stock-adjust]");
+  if (stockBtn) {
+    const [productId, vIdx, delta] = stockBtn.dataset.stockAdjust.split(":");
+    await adjustVariantStock(productId, Number(vIdx), Number(delta));
+    return;
+  }
+
+  const editBtn = e.target.closest("[data-edit]");
+  if (editBtn) {
+    const [productId, vIdx] = editBtn.dataset.edit.split(":");
+    openEditModal(productId, Number(vIdx));
+    return;
+  }
+
+  const pauseBtn = e.target.closest("[data-toggle-pause]");
+  if (pauseBtn) {
+    await togglePauseProduct(pauseBtn.dataset.togglePause);
+    return;
+  }
+
+  const salesBtn = e.target.closest("[data-sales]");
+  if (salesBtn) {
+    const [productId, vIdx] = salesBtn.dataset.sales.split(":");
+    openSalesModal(productId, Number(vIdx));
+    return;
+  }
+
+  const deleteBtn = e.target.closest("[data-delete]");
+  if (deleteBtn) {
+    await deleteProductById(deleteBtn.dataset.delete);
+  }
+
+});
+
+
+/* =========================
+   REAL STOCK ADJUST
+========================= */
+
+async function adjustVariantStock(productId, variantIndex, delta) {
+
+  const product = products.find(p => p.id === productId);
+  if (!product || !product.colorVariants?.[variantIndex]) return;
+
+  const newStock = Math.max(0, (product.colorVariants[variantIndex].stock || 0) + delta);
+  product.colorVariants[variantIndex].stock = newStock;
+  renderInventory();
+
+  try {
+
+    const updates = { colorVariants: product.colorVariants };
+    if (variantIndex === (product.activeVariantIndex ?? 0)) updates.stock = newStock;
+
+    await updateDoc(doc(db, "products", productId), updates);
+
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Could not update stock.", "danger");
+    await loadProducts();
+  }
+
+}
+
+
+/* =========================
+   PAUSE / RESUME (Active / Inactive)
+========================= */
+
+async function togglePauseProduct(productId) {
+
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
+
+  const newStatus = product.status === "Inactive" ? "Active" : "Inactive";
+
+  try {
+    await updateDoc(doc(db, "products", productId), { status: newStatus });
+    product.status = newStatus;
+    renderInventory();
+    showToast(`Product set to ${newStatus}`, "warning");
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Could not update status.", "danger");
+  }
+
+}
+
+
+/* =========================
+   DELETE
+========================= */
+
+async function deleteProductById(productId) {
+
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
+
+  if (!confirm(`Delete "${product.productName}"? This cannot be undone.`)) return;
+
+  try {
+    await deleteDoc(doc(db, "products", productId));
+    await logAdminAction("Deleted product (Inventory Management)", "Products", { productId, name: product.productName });
+    products = products.filter(p => p.id !== productId);
+    renderInventory();
+    showToast("Product deleted", "danger");
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Could not delete product.", "danger");
+  }
+
+}
+
+
+/* =========================
+   SALES METRICS MODAL (real fields — only non-zero once something
+   increments them; this pass does not add automatic increment-on-
+   delivery, since that needs order data linked to a specific variant)
+========================= */
+
+function openSalesModal(productId, variantIndex) {
+
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
+
+  const variant = product.colorVariants?.[variantIndex] || product.colorVariants?.[0];
+  if (!variant) return;
+
+  document.getElementById("sales-modal-img").src = variant.image || "";
+  document.getElementById("sales-modal-title").textContent = product.productName;
+  document.getElementById("sales-modal-variant-info").textContent = `Variant: ${variant.color}`;
+  document.getElementById("sales-modal-sku").textContent = `SKU: ${variant.skuId || "—"}`;
+  document.getElementById("sales-modal-units").textContent = variant.totalSalesCount || 0;
+  document.getElementById("sales-modal-revenue").textContent = `₹${(variant.totalRevenue || 0).toFixed(2)}`;
+  document.getElementById("sales-modal-price").textContent = `₹${Number(variant.price || 0).toFixed(2)}`;
+  document.getElementById("sales-modal-stock").textContent = `${variant.stock || 0} units`;
+
+  salesModal.classList.remove("hidden");
+  salesModal.classList.add("flex");
+
+}
+
+document.getElementById("closeSalesModalBtn").addEventListener("click", closeSalesModal);
+document.getElementById("closeSalesModalBtn2").addEventListener("click", closeSalesModal);
+function closeSalesModal() {
+  salesModal.classList.add("hidden");
+  salesModal.classList.remove("flex");
+}
+
+
+/* =========================
+   EDIT MODAL (real updateDoc)
+========================= */
+
+function openEditModal(productId, variantIndex) {
+
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
+
+  const variant = product.colorVariants?.[variantIndex] || product.colorVariants?.[0];
+  if (!variant) return;
+
+  document.getElementById("edit-product-id").value = productId;
+  document.getElementById("edit-variant-index").value = variantIndex;
+  document.getElementById("edit-title").value = product.productName;
+  document.getElementById("edit-status").value = product.status || "Active";
+
+  document.getElementById("edit-variant-header-title").textContent = `Editing Variant: ${variant.color}`;
+  document.getElementById("edit-var-color").value = variant.color;
+  document.getElementById("edit-var-price").value = variant.price;
+  document.getElementById("edit-var-mrp").value = variant.mrp;
+  document.getElementById("edit-var-stock").value = variant.stock;
+
+  editModal.classList.remove("hidden");
+  editModal.classList.add("flex");
+
+}
+
+document.getElementById("closeEditModalBtn").addEventListener("click", closeEditModal);
+document.getElementById("cancelEditBtn").addEventListener("click", closeEditModal);
+function closeEditModal() {
+  editModal.classList.add("hidden");
+  editModal.classList.remove("flex");
+}
+
+editForm.addEventListener("submit", async (e) => {
+
+  e.preventDefault();
+
+  const productId = document.getElementById("edit-product-id").value;
+  const variantIndex = parseInt(document.getElementById("edit-variant-index").value, 10);
+
+  const product = products.find(p => p.id === productId);
+  if (!product || !product.colorVariants?.[variantIndex]) return;
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+
+  try {
+
+    product.productName = document.getElementById("edit-title").value.trim();
+    product.status = document.getElementById("edit-status").value;
+
+    product.colorVariants[variantIndex].color = document.getElementById("edit-var-color").value.trim();
+    product.colorVariants[variantIndex].price = parseFloat(document.getElementById("edit-var-price").value);
+    product.colorVariants[variantIndex].mrp = parseFloat(document.getElementById("edit-var-mrp").value);
+    product.colorVariants[variantIndex].stock = parseInt(document.getElementById("edit-var-stock").value, 10);
+
+    const updates = {
+      productName: product.productName,
+      status: product.status,
+      colorVariants: product.colorVariants
+    };
+
+    if (variantIndex === (product.activeVariantIndex ?? 0)) {
+      updates.price = product.colorVariants[variantIndex].price;
+      updates.mrp = product.colorVariants[variantIndex].mrp;
+      updates.stock = product.colorVariants[variantIndex].stock;
+    }
+
+    await updateDoc(doc(db, "products", productId), updates);
+
+    await logAdminAction("Edited product (Inventory Management)", "Products", { productId, name: product.productName });
+
+    renderInventory();
+    closeEditModal();
+    showToast("Changes saved", "success");
+
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Could not save changes.", "danger");
+  } finally {
+    submitBtn.disabled = false;
+  }
+
+});
+
+
+/* =========================
+   INITIAL FORM STATE
+========================= */
+
+renderBaseImageSlots();
+renderVariantRows();
