@@ -764,4 +764,3 @@ onAuthStateChanged(auth, async (user) => {
     console.log(error);
   }
 })();
-
