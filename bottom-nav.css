@@ -40,6 +40,11 @@
   transition: transform 0.2s ease;
 }
 
+.bottom-nav .nav-item span {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
 .bottom-nav .nav-item.active {
   color: #ea580c;
   font-weight: 600;
