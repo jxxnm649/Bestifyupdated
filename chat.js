@@ -17,6 +17,8 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
+import { uploadToCloudinary as uploadToCloudinaryWithProgress, mountProgressBar } from "./upload-progress.js";
+
 const chatMessages = document.getElementById("chatMessages");
 const chatReplyForm = document.getElementById("chatReplyForm");
 const chatInput = document.getElementById("chatInput");
@@ -159,25 +161,8 @@ imageInput.addEventListener("change", () => {
 
 photoPreviewRemove.addEventListener("click", clearSelectedPhoto);
 
-async function uploadChatImage(file) {
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "Bestifyimg");
-
-  const response = await fetch(
-    "https://api.cloudinary.com/v1_1/rgksliph/image/upload",
-    { method: "POST", body: formData }
-  );
-
-  const data = await response.json();
-
-  if (!data.secure_url) {
-    throw new Error("Photo upload failed. Please try again.");
-  }
-
-  return data.secure_url;
-
+async function uploadChatImage(file, onProgress) {
+  return uploadToCloudinaryWithProgress(file, onProgress);
 }
 
 
@@ -228,7 +213,16 @@ chatReplyForm.addEventListener("submit", async (e) => {
 
     if (imageFile) {
       chatSendBtn.querySelector("span").textContent = "Uploading...";
-      imageUrl = await uploadChatImage(imageFile);
+      const bar = mountProgressBar(chatSendBtn.parentElement);
+      try {
+        imageUrl = await uploadChatImage(imageFile, (pct) => {
+          bar.update(pct);
+          chatSendBtn.querySelector("span").textContent = `Uploading... ${pct}%`;
+        });
+        bar.done();
+      } finally {
+        bar.remove();
+      }
     }
 
     await addDoc(collection(db, "chats", currentUser.uid, "messages"), {

@@ -10,6 +10,8 @@ import {
 }
 from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
+import { uploadToCloudinary as uploadToCloudinaryWithProgress, mountProgressBar } from "./upload-progress.js";
+
 const form = document.getElementById("profileForm");
 const saveBtn = document.getElementById("profileSaveBtn");
 const profilePicPreview = document.getElementById("profilePicPreview");
@@ -62,21 +64,11 @@ profilePicInput.addEventListener("change", () => {
 
 });
 
-async function uploadProfilePic() {
+async function uploadProfilePic(onProgress) {
 
   if (!selectedPicFile) return currentPicUrl;
 
-  const formData = new FormData();
-  formData.append("file", selectedPicFile);
-  formData.append("upload_preset", "Bestifyimg");
-
-  const response = await fetch(
-    "https://api.cloudinary.com/v1_1/rgksliph/image/upload",
-    { method: "POST", body: formData }
-  );
-
-  const data = await response.json();
-  return data.secure_url;
+  return uploadToCloudinaryWithProgress(selectedPicFile, onProgress);
 
 }
 
@@ -129,7 +121,13 @@ onAuthStateChanged(auth, async (user) => {
     try {
 
       if (selectedPicFile) {
-        currentPicUrl = await uploadProfilePic();
+        const bar = mountProgressBar(profilePicPreview.parentElement);
+        try {
+          currentPicUrl = await uploadProfilePic((pct) => bar.update(pct));
+          bar.done();
+        } finally {
+          bar.remove();
+        }
       }
 
       const updateData = readCurrentFormData();

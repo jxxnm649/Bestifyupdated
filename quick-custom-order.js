@@ -13,6 +13,8 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
+import { uploadToCloudinary as uploadToCloudinaryWithProgress } from "./upload-progress.js";
+
 import {
   getFunctions,
   httpsCallable
@@ -164,12 +166,20 @@ async function addPhoto(file) {
     return;
   }
 
-  const entry = { file, url: null, uploading: true, previewUrl: URL.createObjectURL(file) };
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    file, url: null, uploading: true, progress: 0,
+    previewUrl: URL.createObjectURL(file)
+  };
   uploadedImages.push(entry);
   renderThumbnails();
 
   try {
-    entry.url = await uploadToCloudinary(file);
+    entry.url = await uploadToCloudinaryWithProgress(file, (pct) => {
+      entry.progress = pct;
+      const badge = document.getElementById(`upload-pct-${entry.id}`);
+      if (badge) badge.textContent = `${pct}%`;
+    });
   } catch (error) {
     console.error("Photo upload error:", error);
     alert("Could not upload that photo. Please try again.");
@@ -181,23 +191,6 @@ async function addPhoto(file) {
 
 }
 
-async function uploadToCloudinary(file) {
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "Bestifyimg");
-
-  const response = await fetch(
-    "https://api.cloudinary.com/v1_1/rgksliph/image/upload",
-    { method: "POST", body: formData }
-  );
-
-  const data = await response.json();
-  if (!data.secure_url) throw new Error("Upload failed");
-  return data.secure_url;
-
-}
-
 function renderThumbnails() {
   const row = document.getElementById("photoRow");
   row.innerHTML = "";
@@ -205,7 +198,9 @@ function renderThumbnails() {
   uploadedImages.forEach((entry, i) => {
     const div = document.createElement("div");
     div.className = "image-preview-card" + (entry.uploading ? " uploading" : "");
-    div.innerHTML = `<img src="${entry.previewUrl}"><button type="button" class="remove-img-btn" data-index="${i}">✕</button>`;
+    div.innerHTML = `<img src="${entry.previewUrl}">` +
+      (entry.uploading ? `<div class="upload-pct-overlay" id="upload-pct-${entry.id}">${entry.progress || 0}%</div>` : "") +
+      `<button type="button" class="remove-img-btn" data-index="${i}">✕</button>`;
     row.appendChild(div);
   });
 
