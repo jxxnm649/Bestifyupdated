@@ -16,6 +16,7 @@ import {
 
 import { showToast as designShowToast } from "../design-system.js";
 import { logAdminAction } from "./audit.js";
+import { uploadToCloudinary as uploadToCloudinaryWithProgress, mountProgressBar } from "../upload-progress.js";
 
 /* =========================
    STATE
@@ -338,17 +339,22 @@ function resetProductForm() {
 
 
 /* =========================
-   REAL CLOUDINARY UPLOAD
+   REAL CLOUDINARY UPLOAD (with progress bar near the Save button)
 ========================= */
 
+let productUploadBar = null;
+let productUploadDone = 0;
+let productUploadTotal = 0;
+
 async function uploadToCloudinary(file) {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "Bestifyimg");
-  const response = await fetch("https://api.cloudinary.com/v1_1/rgksliph/image/upload", { method: "POST", body: formData });
-  const data = await response.json();
-  if (!data.secure_url) throw new Error("Image upload failed. Please try again.");
-  return data.secure_url;
+  productUploadDone++;
+  const fileNum = productUploadDone;
+  return uploadToCloudinaryWithProgress(file, (pct) => {
+    if (productUploadBar) {
+      productUploadBar.update(pct);
+      productUploadBar.label.textContent = `Uploading photo ${fileNum} of ${productUploadTotal}... ${pct}%`;
+    }
+  });
 }
 
 
@@ -369,6 +375,11 @@ productForm.addEventListener("submit", async (e) => {
 
   submitBtn.disabled = true;
   submitBtn.textContent = "Saving...";
+
+  productUploadDone = 0;
+  productUploadTotal = baseImageSlots.filter(s => s?.file).length
+    + variantFormRows.filter(r => r.file).length;
+  productUploadBar = productUploadTotal > 0 ? mountProgressBar(submitBtn.parentElement) : null;
 
   try {
 
@@ -454,6 +465,7 @@ productForm.addEventListener("submit", async (e) => {
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = `<span>Save Product &amp; Variants</span> <i class="fa-solid fa-arrow-right"></i>`;
+    if (productUploadBar) { productUploadBar.remove(); productUploadBar = null; }
   }
 
 });

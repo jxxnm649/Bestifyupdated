@@ -13,6 +13,7 @@ import {
 
 import { showToast } from "../design-system.js";
 import { logAdminAction } from "./audit.js";
+import { uploadToCloudinary as uploadToCloudinaryWithProgress, mountProgressBar } from "../upload-progress.js";
 
 
 const SETTINGS_DOC = doc(db, "settings", "store");
@@ -81,10 +82,19 @@ function applyToForm(settings) {
   supportPhone.value = settings.supportPhone ?? "";
   storeAddress.value = settings.storeAddress ?? "";
 
-  if (settings.homeBannerUrl) {
-    bannerPreviewImg.src = settings.homeBannerUrl;
-    bannerPreviewWrap.style.display = "block";
+  if (settings.homeBanners && settings.homeBanners.length) {
+    bannerManager.setLoaded(settings.homeBanners.map(b => ({ ...b })));
+  } else if (settings.homeBannerUrl) {
+    // migrate legacy single-banner field into the new list, display-only
+    // until the admin adds/edits something (which then saves it properly)
+    bannerManager.setLoaded([{ id: "legacy", url: settings.homeBannerUrl, hidden: false }]);
+  } else {
+    bannerManager.setLoaded([]);
   }
+
+  shopPhotoManager.setLoaded(
+    (settings.shopPhotos && settings.shopPhotos.length) ? settings.shopPhotos.map(p => ({ ...p })) : []
+  );
 
   shippingFee.value = settings.shippingFee ?? 0;
   freeShippingThreshold.value = settings.freeShippingThreshold ?? 0;
@@ -102,65 +112,184 @@ function applyToForm(settings) {
 
 
 /* =========================
-   HOME BANNER UPLOAD (real Cloudinary, same account used elsewhere)
+   IMAGE MANAGERS (multiple, real Cloudinary uploads —
+   add / replace / hide / delete). Used for both the home banner
+   carousel (settings.homeBanners) and the shop-photo strip in the
+   "Visit Us" section (settings.shopPhotos).
 ========================= */
 
-const bannerFile = document.getElementById("bannerFile");
-const uploadBannerBtn = document.getElementById("uploadBannerBtn");
-const bannerUploadStatus = document.getElementById("bannerUploadStatus");
-const bannerPreviewWrap = document.getElementById("bannerPreviewWrap");
-const bannerPreviewImg = document.getElementById("bannerPreviewImg");
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
 
-if (uploadBannerBtn) {
-  uploadBannerBtn.addEventListener("click", async () => {
+function createImageManager({ field, listWrapId, fileInputId, uploadBtnId, statusId, itemLabel, emptyLabel }) {
 
-    const file = bannerFile.files[0];
-    if (!file) {
-      bannerUploadStatus.textContent = "Choose a photo first.";
-      bannerUploadStatus.style.color = "var(--bf-danger, #c0392b)";
+  const listWrap = document.getElementById(listWrapId);
+  const fileInput = document.getElementById(fileInputId);
+  const uploadBtn = document.getElementById(uploadBtnId);
+  const status = document.getElementById(statusId);
+
+  const manager = { items: [] };
+
+  async function save() {
+    await setDoc(SETTINGS_DOC, { [field]: manager.items, updatedAt: serverTimestamp() }, { merge: true });
+    await logAdminAction(`Updated ${itemLabel.toLowerCase()}s`, "Settings", { count: manager.items.length });
+  }
+
+  function render() {
+    if (!listWrap) return;
+
+    if (!manager.items.length) {
+      listWrap.innerHTML = `<div style="font-size:12px;opacity:.6;">${emptyLabel}</div>`;
       return;
     }
 
-    uploadBannerBtn.disabled = true;
-    bannerUploadStatus.textContent = "Uploading...";
-    bannerUploadStatus.style.color = "var(--ink-soft)";
+    listWrap.innerHTML = manager.items.map(item => `
+      <div class="bf-card" data-id="${item.id}" style="display:flex; gap:10px; align-items:center; padding:10px; ${item.hidden ? "opacity:.5;" : ""}">
+        <img src="${item.url}" alt="${itemLabel}" style="width:90px; height:38px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex-shrink:0;">
+        <div style="flex:1; font-size:12px;">${item.hidden ? "Hidden" : "Visible"}</div>
+        <button type="button" class="bf-btn bf-btn-ghost bf-btn-sm im-toggle-btn" style="width:auto;">${item.hidden ? "Show" : "Hide"}</button>
+        <button type="button" class="bf-btn bf-btn-ghost bf-btn-sm im-replace-btn" style="width:auto;">Replace</button>
+        <button type="button" class="bf-btn bf-btn-danger bf-btn-sm im-delete-btn" style="width:auto;">Delete</button>
+        <input type="file" accept="image/*" class="im-replace-input" style="display:none;">
+      </div>
+    `).join("");
+  }
 
-    try {
+  function setLoaded(items) {
+    manager.items = items;
+    render();
+  }
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "Bestifyimg");
+  if (uploadBtn) {
+    uploadBtn.addEventListener("click", async () => {
 
-      const response = await fetch(
-        "https://api.cloudinary.com/v1_1/rgksliph/image/upload",
-        { method: "POST", body: formData }
-      );
+      const file = fileInput.files[0];
+      if (!file) {
+        status.textContent = "Choose a photo first.";
+        status.style.color = "var(--bf-danger, #c0392b)";
+        return;
+      }
 
-      const data = await response.json();
-      if (!data.secure_url) throw new Error("Upload failed. Please try again.");
+      uploadBtn.disabled = true;
+      status.textContent = "";
+      status.style.color = "var(--ink-soft)";
+      const bar = mountProgressBar(status.parentElement);
 
-      await setDoc(SETTINGS_DOC, { homeBannerUrl: data.secure_url, updatedAt: serverTimestamp() }, { merge: true });
+      try {
 
-      await logAdminAction("Updated home banner", "Settings", { url: data.secure_url });
+        const url = await uploadToCloudinaryWithProgress(file, (pct) => bar.update(pct));
+        bar.done();
+        manager.items.push({ id: uid(), url, hidden: false });
+        await save();
+        render();
 
-      bannerPreviewImg.src = data.secure_url;
-      bannerPreviewWrap.style.display = "block";
-      bannerFile.value = "";
+        fileInput.value = "";
+        status.textContent = `✓ ${itemLabel} added — live on the home page now.`;
+        status.style.color = "var(--bf-success, #2e7d32)";
+        showToast(`${itemLabel} added`, "success");
 
-      bannerUploadStatus.textContent = "✓ Banner updated — live on the home page now.";
-      bannerUploadStatus.style.color = "var(--bf-success, #2e7d32)";
-      showToast("Home banner updated", "success");
+      } catch (error) {
+        console.error(error);
+        status.textContent = error.message || "Upload failed.";
+        status.style.color = "var(--bf-danger, #c0392b)";
+      } finally {
+        uploadBtn.disabled = false;
+        bar.remove();
+      }
 
-    } catch (error) {
-      console.error(error);
-      bannerUploadStatus.textContent = error.message || "Upload failed.";
-      bannerUploadStatus.style.color = "var(--bf-danger, #c0392b)";
-    } finally {
-      uploadBannerBtn.disabled = false;
-    }
+    });
+  }
 
-  });
+  if (listWrap) {
+    listWrap.addEventListener("click", async (e) => {
+
+      const row = e.target.closest("[data-id]");
+      if (!row) return;
+      const id = row.dataset.id;
+      const item = manager.items.find(x => x.id === id);
+      if (!item) return;
+
+      if (e.target.classList.contains("im-toggle-btn")) {
+
+        item.hidden = !item.hidden;
+        render();
+        try {
+          await save();
+          showToast(item.hidden ? `${itemLabel} hidden` : `${itemLabel} shown`, "success");
+        } catch (error) {
+          console.error(error);
+          showToast("Couldn't save — try again", "error");
+        }
+
+      } else if (e.target.classList.contains("im-delete-btn")) {
+
+        if (!confirm(`Delete this ${itemLabel.toLowerCase()}?`)) return;
+        manager.items = manager.items.filter(x => x.id !== id);
+        render();
+        try {
+          await save();
+          showToast(`${itemLabel} deleted`, "success");
+        } catch (error) {
+          console.error(error);
+          showToast("Couldn't save — try again", "error");
+        }
+
+      } else if (e.target.classList.contains("im-replace-btn")) {
+
+        row.querySelector(".im-replace-input").click();
+
+      }
+    });
+
+    listWrap.addEventListener("change", async (e) => {
+      if (!e.target.classList.contains("im-replace-input")) return;
+
+      const row = e.target.closest("[data-id]");
+      const id = row.dataset.id;
+      const item = manager.items.find(x => x.id === id);
+      const file = e.target.files[0];
+      if (!item || !file) return;
+
+      const bar = mountProgressBar(row);
+
+      try {
+        const url = await uploadToCloudinaryWithProgress(file, (pct) => bar.update(pct));
+        bar.done();
+        item.url = url;
+        render();
+        await save();
+        showToast(`${itemLabel} replaced`, "success");
+      } catch (error) {
+        console.error(error);
+        bar.remove();
+        showToast("Upload failed — try again", "error");
+      }
+    });
+  }
+
+  return { setLoaded };
 }
+
+const bannerManager = createImageManager({
+  field: "homeBanners",
+  listWrapId: "bannerListWrap",
+  fileInputId: "bannerFile",
+  uploadBtnId: "uploadBannerBtn",
+  statusId: "bannerUploadStatus",
+  itemLabel: "Banner",
+  emptyLabel: "No banners yet — add one below."
+});
+
+const shopPhotoManager = createImageManager({
+  field: "shopPhotos",
+  listWrapId: "shopPhotoListWrap",
+  fileInputId: "shopPhotoFile",
+  uploadBtnId: "uploadShopPhotoBtn",
+  statusId: "shopPhotoUploadStatus",
+  itemLabel: "Photo",
+  emptyLabel: "No photos yet — add one below."
+});
 
 function readFromForm() {
   return {
