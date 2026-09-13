@@ -7,9 +7,11 @@
     <title>My Orders</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="orders.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="bottom-nav.css">
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
-<body>
+<body class="bf-has-nav">
 
     <!-- Top Navigation Header -->
     <div class="top-header">
@@ -164,5 +166,26 @@
           shipped yet).
         */
     </script>
+
+    <nav class="bottom-nav">
+        <a href="home.html" class="nav-item" id="nav-home">
+            <i class="fa-solid fa-store"></i>
+            <span>Home</span>
+        </a>
+        <a href="wishlist.html" class="nav-item" id="nav-liked">
+            <i class="fa-regular fa-thumbs-up"></i>
+            <span>Liked</span>
+        </a>
+        <a href="orders.html" class="nav-item" id="nav-orders">
+            <i class="fa-solid fa-box"></i>
+            <span>Orders</span>
+        </a>
+        <a href="profile.html" class="nav-item" id="nav-account">
+            <i class="fa-regular fa-file-lines"></i>
+            <span>My Account</span>
+        </a>
+    </nav>
+
+    <script src="bottom-nav.js"></script>
 </body>
 </html>
