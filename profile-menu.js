@@ -64,17 +64,6 @@ async function buildMenu(moreBtn, uid) {
 
 }
 
-function injectNavAvatar(seed, photoUrl) {
-
-  const navSpan = document.querySelector('.bottom-nav a[href="profile.html"] span');
-  if (!navSpan) return;
-
-  const src = photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed || "U")}&backgroundColor=F2A93B`;
-
-  navSpan.innerHTML = `<img src="${src}" alt="My Account" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:block;">`;
-
-}
-
 onAuthStateChanged(auth, (user) => {
   if (!user) return;
 
@@ -84,16 +73,4 @@ onAuthStateChanged(auth, (user) => {
   if (moreBtn && !document.getElementById("pmPopup")) {
     buildMenu(moreBtn, user.uid);
   }
-
-  // Bottom-nav "My Account" icon — a real profile photo instead of
-  // the generic 🏪 icon, same as Gmail's account avatar.
-  getDoc(doc(db, "users", user.uid))
-    .then((snap) => {
-      const data = snap.exists() ? snap.data() : {};
-      injectNavAvatar(data.name || user.email, data.profilePicture);
-    })
-    .catch((error) => {
-      console.error("Nav avatar load error:", error);
-      injectNavAvatar(user.email, null);
-    });
 });
