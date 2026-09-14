@@ -35,9 +35,11 @@
             <button type="button" id="editPincodeBtn">Edit</button>
         </div>
 
-        <!-- Real promo banner (shop's own marketing poster) -->
+        <!-- Real promo banner carousel (admin-managed, auto-scrolls) -->
         <div class="shop-photo-box">
-            <img id="homeBannerImg" src="promo-banner.png" alt="Bestify Mobile Kolavi — Your Mobile, Our Priority">
+            <div class="home-banner-carousel" id="homeBannerCarousel">
+                <img id="homeBannerImg" src="promo-banner.png" alt="Bestify Mobile Kolavi — Your Mobile, Our Priority">
+            </div>
         </div>
 
         <!-- Auto-rotating social card (YouTube / Instagram / Facebook — real links + real logos) -->
@@ -68,6 +70,16 @@
                     <div class="yt-text">
                         <div>Like us on Facebook</div>
                         <div>Offers, updates &amp; more</div>
+                    </div>
+                </div>
+                <span>›</span>
+            </a>
+            <a href="https://wa.me/919110690727" target="_blank" rel="noopener" class="yt-card social-slide">
+                <div class="yt-left">
+                    <span class="yt-icon" style="background:#25d366;"><i class="fa-brands fa-whatsapp"></i></span>
+                    <div class="yt-text">
+                        <div>Chat on WhatsApp</div>
+                        <div>Offers &amp; order updates</div>
                     </div>
                 </div>
                 <span>›</span>
@@ -115,8 +127,8 @@
 
             <h2 class="connect-title">📍 Visit Us / Connect</h2>
 
-            <div class="image-slider-container">
-                <div class="image-slider">
+            <div class="image-slider-container" id="shopPhotoContainer">
+                <div class="image-slider" id="shopPhotoSlider">
                     <img src="shop-front.jpg" alt="Bestify Mobile Kolavi shop front">
                     <img src="shop-street.jpg" alt="Bestify Mobile Kolavi street view">
                 </div>

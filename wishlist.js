@@ -49,36 +49,37 @@ onAuthStateChanged(auth, async (user) => {
 function render() {
 
   if (wishlistItems.length === 0) {
-    wishlistDiv.innerHTML = "<h2>You haven't liked anything yet ❤️</h2>";
+    wishlistDiv.innerHTML = `
+      <div class="wl-empty">
+        <div class="wl-empty-icon">❤️</div>
+        <h2>You haven't liked anything yet</h2>
+        <p>Tap the heart on any product to save it here.</p>
+        <a href="home.html" class="wl-empty-btn">Browse Products</a>
+      </div>
+    `;
     return;
   }
 
   wishlistDiv.innerHTML = wishlistItems.map((product) => `
-    <div class="card">
-
-      <img src="${product.image}" alt="${product.productName}">
-
-      <div class="card-content">
-
-        <h2>${product.productName}</h2>
-
-        <p>${product.category}</p>
-
-        <p class="price">₹${product.price}</p>
-
-        <p>${product.description}</p>
-
-        <button class="move-btn" data-id="${product.id}">
-          🛒 Move to Cart
-        </button>
-
-        <button class="remove-btn" data-id="${product.id}">
-          Remove ❤️
-        </button>
-
+    <article class="wl-card">
+      <div class="wl-image-wrapper">
+        <img src="${product.image}" alt="${product.productName}">
       </div>
-
-    </div>
+      <div class="wl-card-details">
+        <div>
+          <h2 class="wl-product-title">${product.productName}</h2>
+          <div class="wl-price-tag">₹${product.price}</div>
+        </div>
+        <div class="wl-actions">
+          <button type="button" class="wl-btn wl-btn-move" data-id="${product.id}">
+            <i class="fa-solid fa-cart-shopping"></i> Move to Cart
+          </button>
+          <button type="button" class="wl-btn wl-btn-remove" data-id="${product.id}">
+            Remove <i class="fa-solid fa-heart"></i>
+          </button>
+        </div>
+      </div>
+    </article>
   `).join("");
 
 }
@@ -87,7 +88,7 @@ wishlistDiv.addEventListener("click", async (e) => {
 
   if (!currentUser) return;
 
-  const removeBtn = e.target.closest(".remove-btn");
+  const removeBtn = e.target.closest(".wl-btn-remove");
   if (removeBtn) {
 
     const id = removeBtn.dataset.id;
@@ -104,7 +105,7 @@ wishlistDiv.addEventListener("click", async (e) => {
     return;
   }
 
-  const moveBtn = e.target.closest(".move-btn");
+  const moveBtn = e.target.closest(".wl-btn-move");
   if (moveBtn) {
 
     const id = moveBtn.dataset.id;

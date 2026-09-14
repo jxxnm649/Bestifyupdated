@@ -519,7 +519,7 @@ function renderDisplay(products) {
     });
 
     displayArea.innerHTML = [...groups.entries()].map(([label, items]) => `
-      <div class="date-section-title">📅 ${label}</div>
+      <div class="date-section-title">📅 ${label} <span class="section-count">${items.length} item${items.length > 1 ? "s" : ""}</span></div>
       <div class="catalog-grid">${items.map(catalogCardHTML).join("")}</div>
     `).join("");
 
@@ -533,7 +533,7 @@ function renderDisplay(products) {
     });
 
     displayArea.innerHTML = [...groups.entries()].map(([label, items]) => `
-      <div class="date-section-title">🏷️ ${label}</div>
+      <div class="date-section-title">🏷️ ${label} <span class="section-count">${items.length} item${items.length > 1 ? "s" : ""}</span></div>
       <div class="catalog-grid">${items.map(catalogCardHTML).join("")}</div>
     `).join("");
 
@@ -545,9 +545,11 @@ function renderDisplay(products) {
 
     let html = "";
     if (liked.length) {
-      html += `<div class="date-section-title">❤️ From your Liked list</div><div class="catalog-grid">${liked.map(catalogCardHTML).join("")}</div>`;
+      html += `<div class="date-section-title">❤️ From your Liked list <span class="section-count">${liked.length} item${liked.length > 1 ? "s" : ""}</span></div><div class="catalog-grid">${liked.map(catalogCardHTML).join("")}</div>`;
+    } else {
+      html += `<div class="date-section-title">❤️ From your Liked list <span class="section-count">0 items</span></div><p class="no-results" style="margin:6px 0 14px;">You haven't liked anything yet — tap the heart on a product to see it here.</p>`;
     }
-    html += `<div class="date-section-title">${liked.length ? "🛍️ More products" : "🛍️ All products"}</div><div class="catalog-grid">${rest.map(catalogCardHTML).join("")}</div>`;
+    html += `<div class="date-section-title">${liked.length ? "🛍️ More products" : "🛍️ All products"} <span class="section-count">${rest.length} item${rest.length > 1 ? "s" : ""}</span></div><div class="catalog-grid">${rest.map(catalogCardHTML).join("")}</div>`;
     displayArea.innerHTML = html;
 
   } else {
@@ -748,18 +750,63 @@ onAuthStateChanged(auth, async (user) => {
 })();
 
 /* =========================
-   Real home banner (admin-uploaded) — falls back to the static
-   promo-banner.png file if the admin hasn't set one yet.
+   Auto-scrolling carousels (admin-uploaded banners + shop photos).
+   Auto-advances every 3s; manual swipe is tracked so autoplay
+   continues from wherever the person left it.
 ========================= */
+function setupAutoCarousel(scrollEl, contentEl, urls, altText) {
+  if (!scrollEl || !contentEl || !urls.length) return; // keep whatever static fallback is already in the HTML
+
+  contentEl.innerHTML = urls
+    .map(u => `<img src="${u}" alt="${altText}">`)
+    .join("");
+
+  if (urls.length < 2) return; // nothing to auto-scroll between
+
+  let index = 0;
+  let userScrolling = false;
+  let scrollTimeout = null;
+
+  scrollEl.addEventListener("scroll", () => {
+    userScrolling = true;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      index = Math.round(scrollEl.scrollLeft / scrollEl.clientWidth);
+      userScrolling = false;
+    }, 150);
+  });
+
+  setInterval(() => {
+    if (userScrolling) return;
+    index = (index + 1) % urls.length;
+    scrollEl.scrollTo({ left: index * scrollEl.clientWidth, behavior: "smooth" });
+  }, 3000);
+}
+
 (async function () {
-  const bannerImg = document.getElementById("homeBannerImg");
-  if (!bannerImg) return;
+  const bannerCarousel = document.getElementById("homeBannerCarousel");
+  const shopPhotoContainer = document.getElementById("shopPhotoContainer");
+  const shopPhotoSlider = document.getElementById("shopPhotoSlider");
+  if (!bannerCarousel && !shopPhotoContainer) return;
 
   try {
     const snap = await getDoc(doc(db, "settings", "store"));
-    if (snap.exists() && snap.data().homeBannerUrl) {
-      bannerImg.src = snap.data().homeBannerUrl;
+    const data = snap.exists() ? snap.data() : {};
+
+    let bannerUrls = [];
+    if (Array.isArray(data.homeBanners) && data.homeBanners.length) {
+      bannerUrls = data.homeBanners.filter(b => !b.hidden).map(b => b.url);
+    } else if (data.homeBannerUrl) {
+      bannerUrls = [data.homeBannerUrl];
     }
+    setupAutoCarousel(bannerCarousel, bannerCarousel, bannerUrls, "Bestify Mobile Kolavi");
+
+    let shopPhotoUrls = [];
+    if (Array.isArray(data.shopPhotos) && data.shopPhotos.length) {
+      shopPhotoUrls = data.shopPhotos.filter(p => !p.hidden).map(p => p.url);
+    }
+    setupAutoCarousel(shopPhotoContainer, shopPhotoSlider, shopPhotoUrls, "Bestify Mobile Kolavi shop photo");
+
   } catch (error) {
     console.log(error);
   }
