@@ -134,46 +134,79 @@ body{
 .find-fit-btn:active{ transform: scale(0.96); }
 
 /* ---------- YouTube card + offer strip (real link + real data) ---------- */
-.social-rotator{
-    position: relative;
+/* ============================================================
+   Bestify social bar — auto-scrolling ticker (WhatsApp, Instagram,
+   Facebook, YouTube, Maps, Telegram, Google Business)
+   ============================================================ */
+#bestify-social{
+    width: 100%;
+    background: #fff;
+    padding: 6px 0;
     margin: 8px 0 4px;
-    min-height: 60px;
+    overflow: hidden;
 }
-.social-slide{
-    margin: 0;
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .4s ease;
+#bestify-social .social-window{
+    width: 100%;
+    overflow: hidden;
+    position: relative;
 }
-.social-slide.active{
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.yt-card{
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    box-shadow: var(--shadow-sm);
+#bestify-social .social-track{
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    text-decoration: none;
-    color: var(--ink);
+    gap: 5px;
+    width: max-content;
+    transform: translateX(0);
+    transition: transform .65s cubic-bezier(.4,0,.2,1);
 }
-.yt-left{ display: flex; align-items: center; gap: 10px; }
-.yt-icon{
-    width: 28px; height: 28px;
-    background: #ff0000;
+#bestify-social .social-item{
+    flex: 0 0 calc((100vw - 16px - 20px) / 5);
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 5px;
+    background: var(--card);
+    border: 1px solid var(--line);
     border-radius: 7px;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 12px;
+    box-shadow: var(--shadow-sm);
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 9px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
 }
-.yt-text div:first-child{ font-weight: 700; font-size: 13px; }
-.yt-text div:last-child{ font-size: 11px; color: var(--ink-soft); }
+#bestify-social .social-item i{ flex-shrink: 0; width: 14px; text-align: center; font-size: 12px; }
+#bestify-social .social-item span{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#bestify-social .whatsapp i{ color: #25D366; }
+#bestify-social .instagram i{ color: #E1306C; }
+#bestify-social .facebook i{ color: #1877F2; }
+#bestify-social .youtube i{ color: #FF0000; }
+#bestify-social .maps i{ color: #4285F4; }
+#bestify-social .telegram i{ color: #229ED9; }
+#bestify-social .google-business i{ color: #4285F4; }
+
+@media(max-width:600px){
+    #bestify-social .social-track{ gap: 4px; }
+    #bestify-social .social-item{
+        flex-basis: calc((100vw - 10px - 16px) / 5);
+        height: 28px;
+        padding: 0 3px;
+        gap: 3px;
+        border-radius: 6px;
+        font-size: 8px;
+    }
+    #bestify-social .social-item i{ width: 12px; font-size: 11px; }
+}
+@media(max-width:360px){
+    #bestify-social .social-item{ height: 27px; font-size: 7px; gap: 2px; }
+    #bestify-social .social-item i{ width: 11px; font-size: 10px; }
+}
+@media(min-width:900px){
+    #bestify-social .social-item{ flex-basis: 120px; height: 32px; font-size: 10px; }
+}
 
 .offer-strip{
     margin: 10px 0 4px;

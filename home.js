@@ -713,19 +713,43 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 /* =========================
-   Social card auto-rotate (YouTube / WhatsApp)
-   (pure display, no data involved)
+   Bestify social bar — auto-scrolling ticker
+   (moves one item left every 2s, loops seamlessly)
 ========================= */
 (function () {
-  const slides = document.querySelectorAll("#socialRotator .social-slide");
-  if (slides.length < 2) return;
+  const track = document.querySelector("#bestify-social .social-track");
+  if (!track) return;
 
-  let current = 0;
-  setInterval(() => {
-    slides[current].classList.remove("active");
-    current = (current + 1) % slides.length;
-    slides[current].classList.add("active");
-  }, 4000);
+  const originalItems = Array.from(track.querySelectorAll(".social-item"));
+  if (originalItems.length < 2) return;
+
+  // clone the set once so the strip can loop seamlessly
+  originalItems.forEach((item) => track.appendChild(item.cloneNode(true)));
+
+  let position = 0;
+  const total = originalItems.length;
+
+  function moveNext() {
+    position++;
+
+    const item = track.querySelector(".social-item");
+    const itemWidth = item.getBoundingClientRect().width;
+    const gap = window.innerWidth <= 600 ? 4 : 5;
+
+    track.style.transform = `translateX(-${position * (itemWidth + gap)}px)`;
+
+    if (position >= total) {
+      setTimeout(() => {
+        track.style.transition = "none";
+        position = 0;
+        track.style.transform = "translateX(0)";
+        track.offsetHeight; // force repaint
+        track.style.transition = "transform .65s cubic-bezier(.4,0,.2,1)";
+      }, 700);
+    }
+  }
+
+  setInterval(moveNext, 2000);
 })();
 
 /* =========================
