@@ -164,9 +164,9 @@ function createImageManager({ field, listWrapId, fileInputId, uploadBtnId, statu
   if (uploadBtn) {
     uploadBtn.addEventListener("click", async () => {
 
-      const file = fileInput.files[0];
-      if (!file) {
-        status.textContent = "Choose a photo first.";
+      const files = Array.from(fileInput.files || []);
+      if (!files.length) {
+        status.textContent = "Choose at least one photo first.";
         status.style.color = "var(--bf-danger, #c0392b)";
         return;
       }
@@ -176,21 +176,42 @@ function createImageManager({ field, listWrapId, fileInputId, uploadBtnId, statu
       status.style.color = "var(--ink-soft)";
       const bar = mountProgressBar(status.parentElement);
 
+      let uploadedCount = 0;
+
       try {
 
-        const url = await uploadToCloudinaryWithProgress(file, (pct) => bar.update(pct));
+        for (let i = 0; i < files.length; i++) {
+
+          const file = files[i];
+          const fileNum = i + 1;
+
+          const url = await uploadToCloudinaryWithProgress(file, (pct) => {
+            bar.update(pct);
+            bar.label.textContent = files.length > 1
+              ? `Uploading photo ${fileNum} of ${files.length}... ${pct}%`
+              : `Uploading... ${pct}%`;
+          });
+
+          manager.items.push({ id: uid(), url, hidden: false });
+          uploadedCount++;
+
+        }
+
         bar.done();
-        manager.items.push({ id: uid(), url, hidden: false });
         await save();
         render();
 
         fileInput.value = "";
-        status.textContent = `✓ ${itemLabel} added — live on the home page now.`;
+        status.textContent = files.length > 1
+          ? `✓ ${uploadedCount} ${itemLabel.toLowerCase()}s added — live on the home page now.`
+          : `✓ ${itemLabel} added — live on the home page now.`;
         status.style.color = "var(--bf-success, #2e7d32)";
-        showToast(`${itemLabel} added`, "success");
+        showToast(`${uploadedCount} ${itemLabel.toLowerCase()}${uploadedCount > 1 ? "s" : ""} added`, "success");
 
       } catch (error) {
         console.error(error);
+        // keep whatever uploaded successfully before the failure
+        if (uploadedCount > 0) { await save(); render(); }
         status.textContent = error.message || "Upload failed.";
         status.style.color = "var(--bf-danger, #c0392b)";
       } finally {
