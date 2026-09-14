@@ -45,6 +45,7 @@
     gap: 14px;
     align-items: center;
     box-shadow: var(--shadow-sm);
+    cursor: pointer;
 }
 
 .wl-image-wrapper{
@@ -98,7 +99,9 @@
 .wl-actions{
     display: flex;
     gap: 8px;
+    margin-bottom: 6px;
 }
+.wl-actions:last-child{ margin-bottom: 0; }
 
 .wl-btn{
     border: none;
@@ -116,6 +119,11 @@
     transition: transform .1s ease, background-color .2s ease;
 }
 .wl-btn:active{ transform: scale(0.97); }
+
+.wl-btn-buy{
+    background: var(--marigold-deep, #ea580c);
+    color: #ffffff;
+}
 
 .wl-btn-move{
     background: var(--leaf, #15803d);

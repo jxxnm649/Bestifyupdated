@@ -61,7 +61,7 @@ function render() {
   }
 
   wishlistDiv.innerHTML = wishlistItems.map((product) => `
-    <article class="wl-card">
+    <article class="wl-card" data-id="${product.id}">
       <div class="wl-image-wrapper">
         <img src="${product.image}" alt="${product.productName}">
       </div>
@@ -69,6 +69,11 @@ function render() {
         <div>
           <h2 class="wl-product-title">${product.productName}</h2>
           <div class="wl-price-tag">₹${product.price}</div>
+        </div>
+        <div class="wl-actions">
+          <button type="button" class="wl-btn wl-btn-buy" data-id="${product.id}">
+            <i class="fa-solid fa-bolt"></i> Buy Now
+          </button>
         </div>
         <div class="wl-actions">
           <button type="button" class="wl-btn wl-btn-move" data-id="${product.id}">
@@ -105,6 +110,12 @@ wishlistDiv.addEventListener("click", async (e) => {
     return;
   }
 
+  const buyBtn = e.target.closest(".wl-btn-buy");
+  if (buyBtn) {
+    window.location.href = `checkout.html?productId=${buyBtn.dataset.id}`;
+    return;
+  }
+
   const moveBtn = e.target.closest(".wl-btn-move");
   if (moveBtn) {
 
@@ -136,6 +147,13 @@ wishlistDiv.addEventListener("click", async (e) => {
       console.log(error);
     }
 
+    return;
+  }
+
+  // Tapped the card itself (not a button) — open the full product page.
+  const card = e.target.closest(".wl-card");
+  if (card) {
+    window.location.href = `product.html?id=${card.dataset.id}`;
   }
 
 });

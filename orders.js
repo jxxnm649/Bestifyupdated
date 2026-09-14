@@ -124,6 +124,7 @@ function renderOrderCard(order) {
       <div class="order-actions" onclick="event.stopPropagation()">
         ${canPayNow ? `<button class="btn-action btn-pay-now" onclick="payNow('${order.id}')">⚡ PAY NOW</button>` : ""}
         ${hasCashback ? `<button class="btn-action btn-cashback" onclick="openScratchCard('${order.id}')">🎁 View Cashback</button>` : ""}
+        ${firstProduct.id ? `<button class="btn-action" onclick="viewProductDetails('${firstProduct.id}')">👁️ View Details</button>` : ""}
         <button class="btn-action" onclick="shareOrder('${order.id}')">🔗 Share</button>
         <button class="btn-action" onclick="trackOrder('${order.id}')">🚚 Track Order</button>
       </div>
@@ -169,6 +170,13 @@ window.shareOrder = async function (orderId) {
 /* ---------- Real track (opens the real order-details/tracking page) ---------- */
 window.trackOrder = function (orderId) {
   window.location.href = `order-details.html?orderId=${orderId}`;
+};
+
+
+/* ---------- View full product details (first item if the order has several) ---------- */
+window.viewProductDetails = function (productId) {
+  if (!productId) return;
+  window.location.href = `product.html?id=${productId}`;
 };
 
 
