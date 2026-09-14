@@ -8,16 +8,6 @@ body{
     background: #ffffff;
 }
 
-/* ---------- Top marquee banner (announcement strip) ---------- */
-.top-marquee-banner{
-    background: linear-gradient(90deg, #ea580c, #f59e0b);
-    color: #ffffff;
-    padding: 8px 12px;
-    font-size: 12px;
-    font-weight: 500;
-}
-.top-marquee-banner marquee{ color: #ffffff; }
-
 /* ---------- Top header (brand + Find Fit) ---------- */
 .top-header{
     display: flex;
