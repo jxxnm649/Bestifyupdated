@@ -8,16 +8,6 @@ body{
     background: #ffffff;
 }
 
-/* ---------- Top marquee banner (announcement strip) ---------- */
-.top-marquee-banner{
-    background: linear-gradient(90deg, #ea580c, #f59e0b);
-    color: #ffffff;
-    padding: 8px 12px;
-    font-size: 12px;
-    font-weight: 500;
-}
-.top-marquee-banner marquee{ color: #ffffff; }
-
 /* ---------- Top header (brand + Find Fit) ---------- */
 .top-header{
     display: flex;
@@ -51,26 +41,10 @@ body{
 }
 .shop-photo-box img{
     width: 100%;
-    aspect-ratio: 21 / 9;
-    max-height: 150px;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
     display: block;
     background: var(--paper-dim);
-}
-
-/* Auto-scrolling banner carousel */
-.home-banner-carousel{
-    display: flex;
-    width: 100%;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-}
-.home-banner-carousel::-webkit-scrollbar{ display: none; }
-.home-banner-carousel img{
-    flex: 0 0 100%;
-    scroll-snap-align: start;
 }
 
 .delivery-line{
@@ -134,79 +108,46 @@ body{
 .find-fit-btn:active{ transform: scale(0.96); }
 
 /* ---------- YouTube card + offer strip (real link + real data) ---------- */
-/* ============================================================
-   Bestify social bar — auto-scrolling ticker (WhatsApp, Instagram,
-   Facebook, YouTube, Maps, Telegram, Google Business)
-   ============================================================ */
-#bestify-social{
-    width: 100%;
-    background: #fff;
-    padding: 6px 0;
-    margin: 8px 0 4px;
-    overflow: hidden;
-}
-#bestify-social .social-window{
-    width: 100%;
-    overflow: hidden;
+.social-rotator{
     position: relative;
+    margin: 12px 0 4px;
+    min-height: 60px;
 }
-#bestify-social .social-track{
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    width: max-content;
-    transform: translateX(0);
-    transition: transform .65s cubic-bezier(.4,0,.2,1);
+.social-slide{
+    margin: 0;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .4s ease;
 }
-#bestify-social .social-item{
-    flex: 0 0 calc((100vw - 16px - 20px) / 5);
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 0 5px;
+.social-slide.active{
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.yt-card{
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: var(--radius);
+    padding: 12px 16px;
     box-shadow: var(--shadow-sm);
-    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     text-decoration: none;
-    font-size: 9px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
+    color: var(--ink);
 }
-#bestify-social .social-item i{ flex-shrink: 0; width: 14px; text-align: center; font-size: 12px; }
-#bestify-social .social-item span{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-#bestify-social .whatsapp i{ color: #25D366; }
-#bestify-social .instagram i{ color: #E1306C; }
-#bestify-social .facebook i{ color: #1877F2; }
-#bestify-social .youtube i{ color: #FF0000; }
-#bestify-social .maps i{ color: #4285F4; }
-#bestify-social .telegram i{ color: #229ED9; }
-#bestify-social .google-business i{ color: #4285F4; }
-
-@media(max-width:600px){
-    #bestify-social .social-track{ gap: 4px; }
-    #bestify-social .social-item{
-        flex-basis: calc((100vw - 10px - 16px) / 5);
-        height: 28px;
-        padding: 0 3px;
-        gap: 3px;
-        border-radius: 6px;
-        font-size: 8px;
-    }
-    #bestify-social .social-item i{ width: 12px; font-size: 11px; }
+.yt-left{ display: flex; align-items: center; gap: 10px; }
+.yt-icon{
+    width: 28px; height: 28px;
+    background: #ff0000;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px;
 }
-@media(max-width:360px){
-    #bestify-social .social-item{ height: 27px; font-size: 7px; gap: 2px; }
-    #bestify-social .social-item i{ width: 11px; font-size: 10px; }
-}
-@media(min-width:900px){
-    #bestify-social .social-item{ flex-basis: 120px; height: 32px; font-size: 10px; }
-}
+.yt-text div:first-child{ font-weight: 700; font-size: 13px; }
+.yt-text div:last-child{ font-size: 11px; color: var(--ink-soft); }
 
 .offer-strip{
     margin: 10px 0 4px;
@@ -240,7 +181,7 @@ body{
 
 /* Search Box */
 .search-box{
-    margin: 10px 0;
+    margin: 16px 0;
 }
 
 .search-box input{
@@ -665,18 +606,17 @@ body{
     gap: 10px;
     background: var(--paper-dim);
     border: 1px solid var(--line);
-    padding: 5px 12px;
+    padding: 8px 14px;
     border-radius: var(--radius-sm);
-    font-size: 12px;
+    font-size: 13px;
     color: var(--ink-soft);
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 14px;
 }
 .zoom-control input{
     flex: 1;
     accent-color: var(--marigold-deep);
     cursor: pointer;
-    height: 4px;
 }
 
 /* ---------- Floating pill bottom nav ---------- */
@@ -791,20 +731,6 @@ body.bf-has-nav{ padding-bottom: 90px; }
     margin: 16px 0 10px;
     padding-bottom: 6px;
     border-bottom: 2px solid var(--line);
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-}
-.section-count{
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--marigold-deep);
-    background: var(--price-bg, #fff7ed);
-    border: 1px dashed var(--price-border, #ffedd5);
-    border-radius: 6px;
-    padding: 1px 8px;
-    white-space: nowrap;
 }
 
 .catalog-grid{
