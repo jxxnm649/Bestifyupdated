@@ -21,7 +21,6 @@ const searchInput = document.getElementById("searchInput");
 const bannerTrack = document.getElementById("bannerTrack");
 const bannerDots = document.getElementById("bannerDots");
 const displayArea = document.getElementById("displayArea");
-const filterOptionsBar = document.getElementById("filterOptionsBar");
 const productsSectionTitle = document.getElementById("productsSectionTitle");
 
 let allProducts = [];
@@ -558,17 +557,6 @@ function renderDisplay(products) {
 
   }
 
-}
-
-if (filterOptionsBar) {
-  filterOptionsBar.addEventListener("click", (e) => {
-    const btn = e.target.closest(".filter-option-btn");
-    if (!btn) return;
-
-    activeMode = btn.dataset.mode;
-    [...filterOptionsBar.children].forEach(b => b.classList.toggle("active", b === btn));
-    applyFilters();
-  });
 }
 
 let featured_cache = [];
