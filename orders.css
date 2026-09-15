@@ -241,6 +241,56 @@ body {
 }
 
 /* Action Buttons Row - Single Line Alignment */
+/* ---------- Inline order tracking bar (Ordered → Packed → Shipped → Delivered) ---------- */
+.otrack-bar {
+    margin: 14px 0 4px;
+}
+.otrack-line {
+    position: relative;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 99px;
+    margin: 0 12px 22px;
+}
+.otrack-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #0ea472, #34d399);
+    border-radius: 99px;
+    transition: width .3s ease;
+}
+.otrack-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -60%);
+    font-size: 18px;
+    transition: left .3s ease;
+}
+.otrack-labels {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 2px;
+    font-size: 11px;
+    color: #9ca3af;
+    font-weight: 600;
+}
+.otrack-labels span.active { color: #0ea472; }
+
+.otrack-cancelled-note {
+    margin: 12px 0 4px;
+    padding: 10px 12px;
+    background: #fef2f2;
+    color: #b91c1c;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.btn-cancel-order {
+    color: #e11d48;
+}
+
 .order-actions {
     display: flex;
     align-items: center;

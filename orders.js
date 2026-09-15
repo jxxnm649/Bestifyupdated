@@ -7,9 +7,13 @@ import {
 import {
   collection,
   getDocs,
+  doc,
+  updateDoc,
   query,
   where
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+import { raiseAdminAlert } from "./admin-alerts.js";
 
 import {
   getFunctions,
@@ -52,6 +56,24 @@ function statusSlug(status) {
   if (status === "Delivered") return "delivered";
   if (status === "Shipped") return "shipped";
   return "processing"; // Pending / Confirmed / Packed / Cancelled
+}
+
+const TRACK_STEPS = ["Ordered", "Packed", "Shipped", "Delivered"];
+
+function trackStepIndex(status) {
+  switch (status) {
+    case "Pending":
+    case "Confirmed":
+      return 0;
+    case "Packed":
+      return 1;
+    case "Shipped":
+      return 2;
+    case "Delivered":
+      return 3;
+    default:
+      return 0;
+  }
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -113,6 +135,11 @@ function renderOrderCard(order) {
   const hasCashback = order.cashbackAmount > 0;
   const canPayNow = isCOD && ["Pending", "Confirmed", "Packed"].includes(order.status);
 
+  const isCancelled = order.status === "Cancelled";
+  const canCancel = ["Pending", "Confirmed", "Packed"].includes(order.status);
+  const activeIndex = trackStepIndex(order.status);
+  const progressPct = isCancelled ? 0 : (activeIndex / (TRACK_STEPS.length - 1)) * 100;
+
   return `
     <div class="card order-card-item" data-type="${isCOD ? "cod" : "paid"}" data-status="${statusSlug(order.status)}" data-real-status="${escapeHtml(order.status || "")}" onclick="toggleDetails(this)">
 
@@ -130,12 +157,26 @@ function renderOrderCard(order) {
         </div>
       </div>
 
+      ${isCancelled ? `
+        <div class="otrack-cancelled-note">This order was cancelled.</div>
+      ` : `
+        <div class="otrack-bar" onclick="event.stopPropagation()">
+          <div class="otrack-line">
+            <div class="otrack-fill" style="width:${progressPct}%;"></div>
+            <div class="otrack-marker" style="left:${progressPct}%;">🛵</div>
+          </div>
+          <div class="otrack-labels">
+            ${TRACK_STEPS.map((label, i) => `<span class="${i <= activeIndex ? "active" : ""}">${label}</span>`).join("")}
+          </div>
+        </div>
+      `}
+
       <div class="order-actions" onclick="event.stopPropagation()">
         ${canPayNow ? `<button class="btn-action btn-pay-now" onclick="payNow('${order.id}')">⚡ PAY NOW</button>` : ""}
         ${hasCashback ? `<button class="btn-action btn-cashback" onclick="openScratchCard('${order.id}')">🎁 View Cashback</button>` : ""}
         ${firstProduct.id ? `<button class="btn-action" onclick="viewProductDetails('${firstProduct.id}')">👁️ View Details</button>` : ""}
         <button class="btn-action" onclick="shareOrder('${order.id}')">🔗 Share</button>
-        <button class="btn-action" onclick="trackOrder('${order.id}')">🚚 Track Order</button>
+        ${canCancel ? `<button class="btn-action btn-cancel-order" onclick="cancelOrder('${order.id}')">✕ Cancel Order</button>` : ""}
       </div>
 
       <div class="full-details-panel">
@@ -186,6 +227,39 @@ window.trackOrder = function (orderId) {
 window.viewProductDetails = function (productId) {
   if (!productId) return;
   window.location.href = `product.html?id=${productId}`;
+};
+
+
+/* ---------- Cancel order (same rule as order-details page: only while
+   Pending/Confirmed/Packed, i.e. before it's shipped) ---------- */
+window.cancelOrder = async function (orderId) {
+
+  if (!confirm("Cancel this order?")) return;
+
+  const btn = document.querySelector(`[onclick="cancelOrder('${orderId}')"]`);
+  if (btn) { btn.disabled = true; btn.textContent = "Cancelling..."; }
+
+  try {
+
+    await updateDoc(doc(db, "orders", orderId), {
+      status: "Cancelled",
+      cancelledAt: new Date()
+    });
+
+    const currentUser = auth.currentUser;
+    raiseAdminAlert("order_cancel", "Order cancelled by customer", {
+      userId: currentUser?.uid,
+      orderId
+    });
+
+    if (currentUser) await loadOrders(currentUser);
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Could not cancel this order.");
+    if (btn) { btn.disabled = false; btn.textContent = "✕ Cancel Order"; }
+  }
+
 };
 
 
