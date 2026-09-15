@@ -52,6 +52,21 @@ function formatDate(ts) {
   }
 }
 
+// Same honest estimate used on the order-details page — order date + 4
+// days, matching the "2-4 business days" estimate shown at checkout.
+// Not a live courier ETA, this shop doesn't have one.
+function estimatedDeliveryText(order) {
+  try {
+    const created = order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+    if (isNaN(created.getTime())) return "Not available";
+    const est = new Date(created);
+    est.setDate(est.getDate() + 4);
+    return est.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return "Not available";
+  }
+}
+
 function statusSlug(status) {
   if (status === "Delivered") return "delivered";
   if (status === "Shipped") return "shipped";
@@ -141,7 +156,7 @@ function renderOrderCard(order) {
   const progressPct = isCancelled ? 0 : (activeIndex / (TRACK_STEPS.length - 1)) * 100;
 
   return `
-    <div class="card order-card-item" data-type="${isCOD ? "cod" : "paid"}" data-status="${statusSlug(order.status)}" data-real-status="${escapeHtml(order.status || "")}" onclick="toggleDetails(this)">
+    <div class="card order-card-item" data-type="${isCOD ? "cod" : "paid"}" data-status="${statusSlug(order.status)}" data-real-status="${escapeHtml(order.status || "")}" onclick="viewProductDetails('${firstProduct.id || ""}')">
 
       <div class="order-meta-header">
         <span class="order-date-text">📅 Ordered on: ${formatDate(order.createdAt)}</span>
@@ -174,7 +189,7 @@ function renderOrderCard(order) {
       <div class="order-actions" onclick="event.stopPropagation()">
         ${canPayNow ? `<button class="btn-action btn-pay-now" onclick="payNow('${order.id}')">⚡ PAY NOW</button>` : ""}
         ${hasCashback ? `<button class="btn-action btn-cashback" onclick="openScratchCard('${order.id}')">🎁 View Cashback</button>` : ""}
-        ${firstProduct.id ? `<button class="btn-action" onclick="viewProductDetails('${firstProduct.id}')">👁️ View Details</button>` : ""}
+        <button class="btn-action" onclick="toggleDetails(this)">👁️ View Details</button>
         <button class="btn-action" onclick="shareOrder('${order.id}')">🔗 Share</button>
         ${canCancel ? `<button class="btn-action btn-cancel-order" onclick="cancelOrder('${order.id}')">✕ Cancel Order</button>` : ""}
       </div>
@@ -184,6 +199,8 @@ function renderOrderCard(order) {
         <p><strong>Seller:</strong> Bestify Mobile</p>
         <p><strong>Placed on:</strong> ${formatDate(order.createdAt)}</p>
         <p><strong>Delivery Address:</strong> ${escapeHtml(order.address || "Not available")}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(order.mobile || "Not available")}</p>
+        ${!isCancelled && order.status !== "Delivered" ? `<p><strong>Expected Delivery:</strong> 🚚 ${estimatedDeliveryText(order)}</p>` : ""}
       </div>
 
     </div>

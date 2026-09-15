@@ -111,7 +111,8 @@
     <script type="module" src="orders.js"></script>
 
     <script>
-        function toggleDetails(cardElement) {
+        function toggleDetails(triggerEl) {
+            const cardElement = triggerEl.closest('.order-card-item');
             const panel = cardElement.querySelector('.full-details-panel');
             panel.classList.toggle('show');
         }
