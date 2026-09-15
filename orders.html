@@ -115,6 +115,7 @@
             const cardElement = triggerEl.closest('.order-card-item');
             const panel = cardElement.querySelector('.full-details-panel');
             panel.classList.toggle('show');
+            triggerEl.classList.toggle('is-open', panel.classList.contains('show'));
         }
 
         function filterOrders() {

@@ -189,7 +189,7 @@ function renderOrderCard(order) {
       <div class="order-actions" onclick="event.stopPropagation()">
         ${canPayNow ? `<button class="btn-action btn-pay-now" onclick="payNow('${order.id}')">⚡ PAY NOW</button>` : ""}
         ${hasCashback ? `<button class="btn-action btn-cashback" onclick="openScratchCard('${order.id}')">🎁 View Cashback</button>` : ""}
-        <button class="btn-action" onclick="toggleDetails(this)">👁️ View Details</button>
+        <button class="btn-action details-btn" onclick="toggleDetails(this)">👁️ View Details</button>
         <button class="btn-action" onclick="shareOrder('${order.id}')">🔗 Share</button>
         ${canCancel ? `<button class="btn-action btn-cancel-order" onclick="cancelOrder('${order.id}')">✕ Cancel Order</button>` : ""}
       </div>
