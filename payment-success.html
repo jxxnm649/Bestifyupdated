@@ -17,6 +17,7 @@
       display: flex;
       justify-content: center;
       padding: 20px 10px;
+      overflow-x: hidden;
     }
 
     .container {
@@ -27,6 +28,11 @@
       padding: 20px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
       position: relative;
+      animation: pageEntrance 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes pageEntrance {
+      0% { opacity: 0; transform: translateY(40px) scale(0.92); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .header { text-align: center; margin-bottom: 20px; }
@@ -47,11 +53,20 @@
       width: 70px; height: 70px; background-color: #00a651; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 0 0 10px #e1f5fe; color: white; font-size: 36px;
+      animation: checkPop 0.6s 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
     }
+    @keyframes checkPop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
 
     .order-title { text-align: center; color: #00a651; font-size: 26px; font-weight: 800; margin-bottom: 5px; }
     .order-subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 15px; }
     .order-subtitle strong { color: #00a651; }
+
+    .animate-item { animation: slideUpFade 0.6s ease-out backwards; }
+    .delay-1 { animation-delay: 0.2s; }
+    .delay-2 { animation-delay: 0.35s; }
+    .delay-3 { animation-delay: 0.5s; }
+    .delay-4 { animation-delay: 0.65s; }
+    @keyframes slideUpFade { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
 
     .action-row { display: flex; gap: 10px; margin-bottom: 15px; }
 
@@ -63,7 +78,9 @@
       cursor: pointer; border: none;
       box-shadow: 0 4px 10px rgba(255, 0, 85, 0.2);
       text-decoration: none;
+      transition: transform 0.2s;
     }
+    .scratch-btn-card:active { transform: scale(0.97); }
     .scratch-btn-card .btn-text { text-align: left; }
     .scratch-btn-card .btn-text h4 { font-size: 13px; font-weight: 700; }
     .scratch-btn-card .btn-text p { font-size: 10px; opacity: 0.9; }
@@ -78,7 +95,9 @@
       flex: 1; background: #eefbf4; border: 1px solid #d0f0dd; border-radius: 12px;
       padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;
       cursor: pointer; text-decoration: none;
+      transition: transform 0.2s;
     }
+    .my-orders-btn:active { transform: scale(0.97); }
     .my-orders-btn .btn-text { text-align: left; }
     .my-orders-btn .btn-text h4 { font-size: 13px; color: #333; }
     .my-orders-btn .btn-text p { font-size: 10px; color: #777; }
@@ -132,28 +151,49 @@
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0, 0, 0, 0.6); display: none;
       justify-content: center; align-items: center; z-index: 1000;
+      animation: modalFade 0.3s ease-out;
     }
+    @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+
     .modal-content {
-      background: #fff; padding: 20px; border-radius: 16px; text-align: center;
-      position: relative; width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      background: #fff; padding: 20px; border-radius: 20px; text-align: center;
+      position: relative; width: 310px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      animation: modalZoom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
+    @keyframes modalZoom { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
     .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #888; }
 
     .scratch-container {
       position: relative; width: 240px; height: 240px; margin: 15px auto 0;
-      border-radius: 12px; overflow: hidden;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+      perspective: 1000px;
     }
+
     .reward-box {
-      position: absolute; width: 100%; height: 100%; background: #f0fdf4;
+      position: absolute; width: 100%; height: 100%;
+      background: linear-gradient(135deg, #ffffff, #f0fdf4);
       display: flex; flex-direction: column; justify-content: center; align-items: center;
-      border: 2px dashed #00a651; border-radius: 12px; box-sizing: border-box;
-      padding: 10px; text-align: center;
+      border: 2px dashed #00a651; border-radius: 16px; box-sizing: border-box;
+      padding: 15px; text-align: center;
+      transition: transform 0.3s ease;
     }
-    .reward-box.pending-box { background: #fffbeb; border-color: #f59e0b; }
-    .reward-box h3 { color: #00a651; margin-top: 5px; }
-    .reward-box.pending-box h3 { color: #b45309; font-size: 16px; }
+    .reward-box.pending-box { background: linear-gradient(135deg, #fffef7, #fffbeb); border-color: #f59e0b; }
+
+    /* Continuous 360 spin + bounce — only for a real "credited" win */
+    .reward-box.spin-5s { animation: continuousSpin 1.2s infinite linear; }
+    @keyframes continuousSpin {
+      0% { transform: rotateY(0deg) scale(0.95); }
+      50% { transform: rotateY(180deg) scale(1.08); box-shadow: 0 0 20px rgba(0,166,81,0.5); }
+      100% { transform: rotateY(360deg) scale(0.95); }
+    }
+
+    .animated-emoji { font-size: 46px; animation: emojiBounce 0.8s infinite ease-in-out alternate; }
+    @keyframes emojiBounce { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-10px) scale(1.2); } }
 
     canvas { position: absolute; top: 0; left: 0; cursor: pointer; }
+    .confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 
     .claim-btn {
       width: 100%; color: white; border: none; padding: 12px; border-radius: 25px;
@@ -163,7 +203,6 @@
       justify-content: center; gap: 6px;
     }
     .claim-btn.ready { background: linear-gradient(135deg, #00a651, #00813f); }
-
     @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
     .state-message {
@@ -176,7 +215,7 @@
 
   <div class="container" id="successCard" style="display:none;">
     <div class="thank-you-tag">Thank you<br><small>for choosing Bestify Mobile</small></div>
-    <div class="header">
+    <div class="header animate-item delay-1">
       <div class="logo">Bestify <span>Mobile</span></div>
       <div class="sub-logo">REPAIR | ACCESSORIES | RECHARGE</div>
     </div>
@@ -184,10 +223,10 @@
     <div class="success-icon-container">
       <div class="success-circle">✓</div>
     </div>
-    <h1 class="order-title">Order Confirmed!</h1>
-    <p class="order-subtitle">Your order has been placed successfully.<br>Thank you for shopping with <strong>Bestify Mobile ❤️</strong></p>
+    <h1 class="order-title animate-item delay-1">Order Confirmed!</h1>
+    <p class="order-subtitle animate-item delay-1">Your order has been placed successfully.<br>Thank you for shopping with <strong>Bestify Mobile ❤️</strong></p>
 
-    <div class="action-row">
+    <div class="action-row animate-item delay-2">
       <button class="scratch-btn-card" id="scratchTriggerBtn" onclick="openScratchPopup()" style="display:none;">
         <div class="btn-text">
           <h4>Scratch Card</h4>
@@ -205,7 +244,7 @@
       </a>
     </div>
 
-    <div class="info-card">
+    <div class="info-card animate-item delay-3">
       <div class="order-id-header">
         <div class="order-id-text">
           <p style="font-size:11px; color:#777;">Order ID</p>
@@ -230,14 +269,14 @@
       </div>
     </div>
 
-    <div id="productsWrap"></div>
+    <div id="productsWrap" class="animate-item delay-4"></div>
 
-    <div class="total-box">
+    <div class="total-box animate-item delay-4">
       <span>Total Amount</span>
       <span class="amount" id="totalAmountText">₹0</span>
     </div>
 
-    <a href="home.html" class="continue-btn">
+    <a href="home.html" class="continue-btn animate-item delay-4">
       🏠 Continue Shopping ➔
     </a>
   </div>
@@ -253,11 +292,12 @@
 
       <div class="scratch-container">
         <div class="reward-box" id="rewardBox">
-          <div style="font-size: 40px;" id="rewardEmoji">🎁</div>
+          <div class="animated-emoji" id="rewardEmoji">🎁</div>
           <h3 id="rewardTitleText">You Won ₹0 Cashback!</h3>
           <p style="font-size: 11px; color: #555;" id="rewardSubText"></p>
         </div>
         <canvas id="scratchCanvas" width="240" height="240"></canvas>
+        <canvas id="confettiCanvas" class="confetti-canvas" width="240" height="240"></canvas>
       </div>
 
       <a class="claim-btn" id="claimBtn" href="transactions.html">
@@ -366,7 +406,6 @@
             badge.style.color = "#b91c1c";
           }
 
-          // Scratch Card only shows for orders that actually earned cashback.
           if (order.cashbackAmount > 0) {
             document.getElementById("scratchTriggerBtn").style.display = "flex";
           }
@@ -374,10 +413,8 @@
           stateMessage.style.display = "none";
           successCard.style.display = "block";
 
-          // Auto-open the scratch card 3s after load, same as before —
-          // only if there's actually something to scratch.
           if (order.cashbackAmount > 0) {
-            setTimeout(openScratchPopup, 3000);
+            setTimeout(openScratchPopup, 2500);
           }
 
         } catch (error) {
@@ -429,8 +466,6 @@
         rewardEmoji.textContent = "⏳";
         rewardTitleText.textContent = `₹${amount} Cashback — Pending`;
         rewardSubText.textContent = "Please wait — this will be added to your wallet within 3 days after your order is delivered.";
-
-        // Nothing to claim yet — no button while pending.
         claimBtn.style.display = "none";
 
       }
@@ -445,16 +480,13 @@
       fillRewardContent();
 
       if (scratchAlreadyRevealed) {
-        // Already scratched on a previous visit — show the (live, up to
-        // date) result straight away instead of a fresh silver layer.
         canvas.style.display = 'none';
-        scratchHintText.textContent = isCashbackCredited()
-          ? "Your cashback for this order:"
-          : "Your cashback for this order:";
+        scratchHintText.textContent = "Your cashback for this order:";
         return;
       }
 
       canvas.style.display = 'block';
+      canvas.style.opacity = '1';
       scratchHintText.textContent = "Drag to scratch and reveal your cashback!";
 
       if (!popupOpenedOnce) {
@@ -469,15 +501,59 @@
     };
 
     async function markScratchRevealed() {
-
       if (scratchAlreadyRevealed || !orderId) return;
       scratchAlreadyRevealed = true;
-
       try {
         await updateDoc(doc(db, "orders", orderId), { scratchRevealed: true });
       } catch (error) {
         console.log(error);
       }
+    }
+
+    // 5-second confetti shower — only used for a real credited win
+    function triggerConfetti() {
+
+      const cCanvas = document.getElementById('confettiCanvas');
+      const cCtx = cCanvas.getContext('2d');
+      const particles = [];
+      const colors = ['#00a651', '#ff0055', '#ffc107', '#2196f3', '#9c27b0', '#ff5722'];
+
+      for (let i = 0; i < 70; i++) {
+        particles.push({
+          x: cCanvas.width / 2, y: cCanvas.height / 2,
+          vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.7) * 10,
+          size: Math.random() * 6 + 3,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1
+        });
+      }
+
+      let startTime = performance.now();
+
+      function renderConfetti(time) {
+        cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+        let alive = false;
+
+        particles.forEach(p => {
+          p.x += p.vx; p.y += p.vy; p.vy += 0.22; p.alpha -= 0.009;
+          if (p.alpha > 0) {
+            alive = true;
+            cCtx.globalAlpha = Math.max(p.alpha, 0);
+            cCtx.fillStyle = p.color;
+            cCtx.beginPath();
+            cCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            cCtx.fill();
+          }
+        });
+
+        if (alive && (time - startTime) < 5000) {
+          requestAnimationFrame(renderConfetti);
+        } else {
+          cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+        }
+      }
+
+      requestAnimationFrame(renderConfetti);
 
     }
 
@@ -509,11 +585,31 @@
 
         const percentageCleared = (clearPixels / (pixels.length / 4)) * 100;
 
-        if (percentageCleared >= 40) {
+        if (percentageCleared >= 35) {
+
           revealed = true;
           canvas.style.pointerEvents = 'none';
-          canvas.style.display = 'none';
+          canvas.style.transition = 'opacity 0.5s ease';
+          canvas.style.opacity = '0';
+
+          setTimeout(() => { canvas.style.display = 'none'; }, 500);
+
           markScratchRevealed();
+
+          if (isCashbackCredited()) {
+            // Real win — spin + confetti celebration, then Claim button.
+            rewardBox.classList.add('spin-5s');
+            triggerConfetti();
+            setTimeout(() => {
+              rewardBox.classList.remove('spin-5s');
+              claimBtn.style.display = 'flex';
+              claimBtn.classList.add('ready');
+            }, 5000);
+          }
+          // Pending case: fillRewardContent() already shows the honest
+          // "please wait" message — no spin/confetti for something not
+          // actually credited yet, and no claim button.
+
         }
 
       }
@@ -530,7 +626,7 @@
 
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        ctx.arc(x, y, 18, 0, Math.PI * 2);
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
         ctx.fill();
 
         checkScratchPercentage();
