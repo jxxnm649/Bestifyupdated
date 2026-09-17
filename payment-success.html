@@ -29,28 +29,10 @@
       position: relative;
     }
 
-    /* Header Section */
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .logo {
-      font-size: 24px;
-      font-weight: 800;
-      color: #0d1b2a;
-    }
-
-    .logo span {
-      color: #00a651;
-    }
-
-    .sub-logo {
-      font-size: 10px;
-      color: #666;
-      letter-spacing: 1px;
-      margin-top: 2px;
-    }
+    .header { text-align: center; margin-bottom: 20px; }
+    .logo { font-size: 24px; font-weight: 800; color: #0d1b2a; }
+    .logo span { color: #00a651; }
+    .sub-logo { font-size: 10px; color: #666; letter-spacing: 1px; margin-top: 2px; }
 
     .thank-you-tag {
       float: right;
@@ -60,363 +42,153 @@
       transform: rotate(-5deg);
     }
 
-    /* Success Icon */
-    .success-icon-container {
-      display: flex;
-      justify-content: center;
-      margin: 20px 0 10px;
-    }
-
+    .success-icon-container { display: flex; justify-content: center; margin: 20px 0 10px; }
     .success-circle {
-      width: 70px;
-      height: 70px;
-      background-color: #00a651;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 0 10px #e1f5fe;
-      color: white;
-      font-size: 36px;
+      width: 70px; height: 70px; background-color: #00a651; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 0 10px #e1f5fe; color: white; font-size: 36px;
     }
 
-    .order-title {
-      text-align: center;
-      color: #00a651;
-      font-size: 26px;
-      font-weight: 800;
-      margin-bottom: 5px;
-    }
+    .order-title { text-align: center; color: #00a651; font-size: 26px; font-weight: 800; margin-bottom: 5px; }
+    .order-subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 15px; }
+    .order-subtitle strong { color: #00a651; }
 
-    .order-subtitle {
-      text-align: center;
-      color: #666;
-      font-size: 13px;
-      margin-bottom: 15px;
-    }
-
-    .order-subtitle strong {
-      color: #00a651;
-    }
-
-    /* Action Buttons Row */
-    .action-row {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
+    .action-row { display: flex; gap: 10px; margin-bottom: 15px; }
 
     .scratch-btn-card {
       flex: 1.2;
       background: linear-gradient(135deg, #ff0055, #ff4e50);
-      border-radius: 12px;
-      padding: 10px 12px;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      border: none;
+      border-radius: 12px; padding: 10px 12px; color: white;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; border: none;
       box-shadow: 0 4px 10px rgba(255, 0, 85, 0.2);
       text-decoration: none;
     }
-
-    .scratch-btn-card .btn-text {
-      text-align: left;
-    }
-
-    .scratch-btn-card .btn-text h4 {
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .scratch-btn-card .btn-text p {
-      font-size: 10px;
-      opacity: 0.9;
-    }
+    .scratch-btn-card .btn-text { text-align: left; }
+    .scratch-btn-card .btn-text h4 { font-size: 13px; font-weight: 700; }
+    .scratch-btn-card .btn-text p { font-size: 10px; opacity: 0.9; }
 
     .arrow-icon {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      width: 22px;
-      height: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
+      background: rgba(255, 255, 255, 0.3); border-radius: 50%;
+      width: 22px; height: 22px; display: flex; align-items: center;
+      justify-content: center; font-size: 12px;
     }
 
     .my-orders-btn {
-      flex: 1;
-      background: #eefbf4;
-      border: 1px solid #d0f0dd;
-      border-radius: 12px;
-      padding: 10px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      text-decoration: none;
+      flex: 1; background: #eefbf4; border: 1px solid #d0f0dd; border-radius: 12px;
+      padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; text-decoration: none;
     }
+    .my-orders-btn .btn-text { text-align: left; }
+    .my-orders-btn .btn-text h4 { font-size: 13px; color: #333; }
+    .my-orders-btn .btn-text p { font-size: 10px; color: #777; }
 
-    .my-orders-btn .btn-text {
-      text-align: left;
-    }
-
-    .my-orders-btn .btn-text h4 {
-      font-size: 13px;
-      color: #333;
-    }
-
-    .my-orders-btn .btn-text p {
-      font-size: 10px;
-      color: #777;
-    }
-
-    /* Card Box */
-    .info-card {
-      background: #f8fcf9;
-      border: 1px solid #e1f2e8;
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-    }
-
+    .info-card { background: #f8fcf9; border: 1px solid #e1f2e8; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
     .order-id-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #eaeaea;
-      padding-bottom: 10px;
-      margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #eaeaea; padding-bottom: 10px; margin-bottom: 10px;
     }
-
-    .order-id-text h3 {
-      font-size: 18px;
-      color: #222;
-    }
-
+    .order-id-text h3 { font-size: 18px; color: #222; }
     .badge-placed {
-      background: #d1f2dd;
-      color: #00a651;
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-weight: 600;
-      white-space: nowrap;
+      background: #d1f2dd; color: #00a651; font-size: 11px; padding: 4px 8px;
+      border-radius: 12px; font-weight: 600; white-space: nowrap;
     }
+    .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: left; }
+    .detail-item p { font-size: 10px; color: #888; }
+    .detail-item h5 { font-size: 12px; color: #333; }
 
-    .details-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      text-align: left;
-    }
-
-    .detail-item p {
-      font-size: 10px;
-      color: #888;
-    }
-
-    .detail-item h5 {
-      font-size: 12px;
-      color: #333;
-    }
-
-    /* Product Details */
     .product-card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #ffffff;
-      border: 1px solid #eee;
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: #ffffff; border: 1px solid #eee; border-radius: 12px;
+      padding: 12px; margin-bottom: 10px;
     }
-
     .product-img {
-      width: 50px;
-      height: 50px;
-      background: #f0f0f0;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      object-fit: cover;
-      flex-shrink: 0;
+      width: 50px; height: 50px; background: #f0f0f0; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+      object-fit: cover; flex-shrink: 0;
     }
+    .product-info { flex: 1; margin-left: 12px; min-width: 0; }
+    .product-info h4 { font-size: 14px; color: #222; }
+    .product-info p { font-size: 11px; color: #777; }
+    .product-price { text-align: right; flex-shrink: 0; }
+    .product-price .price { font-size: 16px; font-weight: bold; color: #222; }
+    .product-price .old-price { font-size: 11px; color: #999; text-decoration: line-through; }
 
-    .product-info {
-      flex: 1;
-      margin-left: 12px;
-      min-width: 0;
-    }
-
-    .product-info h4 {
-      font-size: 14px;
-      color: #222;
-    }
-
-    .product-info p {
-      font-size: 11px;
-      color: #777;
-    }
-
-    .product-price {
-      text-align: right;
-      flex-shrink: 0;
-    }
-
-    .product-price .price {
-      font-size: 16px;
-      font-weight: bold;
-      color: #222;
-    }
-
-    .product-price .old-price {
-      font-size: 11px;
-      color: #999;
-      text-decoration: line-through;
-    }
-
-    /* Total Section */
     .total-box {
-      background: #eefbf4;
-      border-radius: 12px;
-      padding: 12px 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-weight: bold;
-      margin-bottom: 15px;
-      margin-top: 5px;
+      background: #eefbf4; border-radius: 12px; padding: 12px 15px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: bold; margin-bottom: 15px; margin-top: 5px;
     }
+    .total-box .amount { font-size: 20px; color: #00a651; }
 
-    .total-box .amount {
-      font-size: 20px;
-      color: #00a651;
-    }
-
-    /* Main CTA Button */
     .continue-btn {
-      width: 100%;
-      background: #00a651;
-      color: white;
-      border: none;
-      padding: 14px;
-      border-radius: 25px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      text-decoration: none;
+      width: 100%; background: #00a651; color: white; border: none;
+      padding: 14px; border-radius: 25px; font-size: 15px; font-weight: bold;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 8px; text-decoration: none;
     }
 
-    /* Scratch Card Popup Modal Styles */
     .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.6);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6); display: none;
+      justify-content: center; align-items: center; z-index: 1000;
     }
-
     .modal-content {
-      background: #fff;
-      padding: 20px;
-      border-radius: 16px;
-      text-align: center;
-      position: relative;
-      width: 300px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      background: #fff; padding: 20px; border-radius: 16px; text-align: center;
+      position: relative; width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
-
-    .close-btn {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 24px;
-      cursor: pointer;
-      color: #888;
-    }
+    .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #888; }
 
     .scratch-container {
-      position: relative;
-      width: 240px;
-      height: 240px;
-      margin: 15px auto 0;
-      border-radius: 12px;
-      overflow: hidden;
+      position: relative; width: 240px; height: 240px; margin: 15px auto 0;
+      border-radius: 12px; overflow: hidden;
     }
-
     .reward-box {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: #f0fdf4;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      border: 2px dashed #00a651;
-      border-radius: 12px;
-      box-sizing: border-box;
+      position: absolute; width: 100%; height: 100%; background: #f0fdf4;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      border: 2px dashed #00a651; border-radius: 12px; box-sizing: border-box;
+      padding: 10px; text-align: center;
     }
+    .reward-box.pending-box { background: #fffbeb; border-color: #f59e0b; }
+    .reward-box h3 { color: #00a651; margin-top: 5px; }
+    .reward-box.pending-box h3 { color: #b45309; font-size: 16px; }
 
-    .reward-box h3 {
-      color: #00a651;
-      margin-top: 5px;
+    canvas { position: absolute; top: 0; left: 0; cursor: pointer; }
+
+    .claim-btn {
+      width: 100%; color: white; border: none; padding: 12px; border-radius: 25px;
+      font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 15px;
+      display: none; box-shadow: 0 4px 12px rgba(0, 166, 81, 0.3);
+      animation: popIn 0.3s ease-out; text-decoration: none; align-items: center;
+      justify-content: center; gap: 6px;
     }
+    .claim-btn.ready { background: linear-gradient(135deg, #00a651, #00813f); }
 
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      cursor: pointer;
-    }
+    @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-    /* Loading / error state */
     .state-message {
-      max-width: 450px;
-      width: 100%;
-      text-align: center;
-      padding: 60px 20px;
-      color: #666;
-      font-size: 14px;
-      font-weight: 600;
+      max-width: 450px; width: 100%; text-align: center; padding: 60px 20px;
+      color: #666; font-size: 14px; font-weight: 600;
     }
   </style>
 </head>
 <body>
 
   <div class="container" id="successCard" style="display:none;">
-    <!-- Header -->
     <div class="thank-you-tag">Thank you<br><small>for choosing Bestify Mobile</small></div>
     <div class="header">
       <div class="logo">Bestify <span>Mobile</span></div>
       <div class="sub-logo">REPAIR | ACCESSORIES | RECHARGE</div>
     </div>
 
-    <!-- Confirmation Icon -->
     <div class="success-icon-container">
       <div class="success-circle">✓</div>
     </div>
     <h1 class="order-title">Order Confirmed!</h1>
     <p class="order-subtitle">Your order has been placed successfully.<br>Thank you for shopping with <strong>Bestify Mobile ❤️</strong></p>
 
-    <!-- Trigger Scratch Card Action (only when this order actually earned cashback) -->
     <div class="action-row">
-      <button class="scratch-btn-card" id="scratchTriggerBtn" onclick="triggerScratchPopup()" style="display:none;">
+      <button class="scratch-btn-card" id="scratchTriggerBtn" onclick="openScratchPopup()" style="display:none;">
         <div class="btn-text">
           <h4>Scratch Card</h4>
           <p>Reveal Your Cashback</p>
@@ -433,7 +205,6 @@
       </a>
     </div>
 
-    <!-- Order Summary -->
     <div class="info-card">
       <div class="order-id-header">
         <div class="order-id-text">
@@ -459,16 +230,13 @@
       </div>
     </div>
 
-    <!-- Product Details (one card per real product in the order) -->
     <div id="productsWrap"></div>
 
-    <!-- Total -->
     <div class="total-box">
       <span>Total Amount</span>
       <span class="amount" id="totalAmountText">₹0</span>
     </div>
 
-    <!-- Button -->
     <a href="home.html" class="continue-btn">
       🏠 Continue Shopping ➔
     </a>
@@ -476,21 +244,25 @@
 
   <div id="stateMessage" class="state-message">Loading your order…</div>
 
-  <!-- Modal Popup for Scratch Card (reveals the real cashback amount) -->
+  <!-- Scratch Card Modal -->
   <div class="modal-overlay" id="scratchModal">
     <div class="modal-content">
       <span class="close-btn" onclick="closeModal()">&times;</span>
       <h2 style="color: #333;">Scratch Card</h2>
-      <p style="font-size: 12px; color: #666;">Drag to scratch and reveal your cashback!</p>
+      <p style="font-size: 12px; color: #666;" id="scratchHintText">Drag to scratch and reveal your cashback!</p>
 
       <div class="scratch-container">
-        <div class="reward-box">
-          <div style="font-size: 40px;">🎁</div>
-          <h3 id="cashbackAmountText">You Won ₹0 Cashback!</h3>
-          <p style="font-size: 11px; color: #555;" id="cashbackStatusText"></p>
+        <div class="reward-box" id="rewardBox">
+          <div style="font-size: 40px;" id="rewardEmoji">🎁</div>
+          <h3 id="rewardTitleText">You Won ₹0 Cashback!</h3>
+          <p style="font-size: 11px; color: #555;" id="rewardSubText"></p>
         </div>
         <canvas id="scratchCanvas" width="240" height="240"></canvas>
       </div>
+
+      <a class="claim-btn" id="claimBtn" href="transactions.html">
+        💳 View Wallet
+      </a>
     </div>
   </div>
 
@@ -498,7 +270,7 @@
 
     import { auth, db } from "./firebase.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+    import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get("orderId");
@@ -514,6 +286,7 @@
     }
 
     let currentOrder = null;
+    let scratchAlreadyRevealed = false;
 
     if (!orderId) {
 
@@ -545,6 +318,7 @@
           }
 
           currentOrder = order;
+          scratchAlreadyRevealed = !!order.scratchRevealed;
 
           document.getElementById("orderIdText").textContent =
             "#" + (order.orderNumber || orderId.slice(0, 8).toUpperCase());
@@ -592,23 +366,19 @@
             badge.style.color = "#b91c1c";
           }
 
-          // Scratch Card button only shows when this order actually earned
-          // real cashback — no fake coupon shown for orders that didn't.
+          // Scratch Card only shows for orders that actually earned cashback.
           if (order.cashbackAmount > 0) {
             document.getElementById("scratchTriggerBtn").style.display = "flex";
-            document.getElementById("myOrdersBtn").style.flex = "1";
-
-            document.getElementById("cashbackAmountText").textContent =
-              `You Won ₹${order.cashbackAmount} Cashback!`;
-
-            document.getElementById("cashbackStatusText").textContent =
-              order.cashbackStatus === "credited"
-                ? "Already credited to your wallet."
-                : "Credited to your wallet once this order is delivered.";
           }
 
           stateMessage.style.display = "none";
           successCard.style.display = "block";
+
+          // Auto-open the scratch card 3s after load, same as before —
+          // only if there's actually something to scratch.
+          if (order.cashbackAmount > 0) {
+            setTimeout(openScratchPopup, 3000);
+          }
 
         } catch (error) {
           console.error(error);
@@ -619,25 +389,100 @@
 
     }
 
-    /* ---------- Scratch card canvas (unchanged interaction, real reward) ---------- */
+    /* ---------- Scratch card: pending vs credited, real amount, persists ---------- */
 
     const modal = document.getElementById('scratchModal');
     const canvas = document.getElementById('scratchCanvas');
     const ctx = canvas.getContext('2d');
+    const claimBtn = document.getElementById('claimBtn');
+    const rewardBox = document.getElementById('rewardBox');
+    const rewardEmoji = document.getElementById('rewardEmoji');
+    const rewardTitleText = document.getElementById('rewardTitleText');
+    const rewardSubText = document.getElementById('rewardSubText');
+    const scratchHintText = document.getElementById('scratchHintText');
 
-    window.triggerScratchPopup = function () {
+    let popupOpenedOnce = false;
+
+    function isCashbackCredited() {
+      return currentOrder && currentOrder.cashbackStatus === "credited";
+    }
+
+    function fillRewardContent() {
+
+      const amount = currentOrder.cashbackAmount || 0;
+
+      if (isCashbackCredited()) {
+
+        rewardBox.classList.remove("pending-box");
+        rewardEmoji.textContent = "🎉";
+        rewardTitleText.textContent = `You Won ₹${amount} Cashback!`;
+        rewardSubText.textContent = "✓ Already added to your Bestify Wallet";
+
+        claimBtn.style.display = "flex";
+        claimBtn.classList.add("ready");
+        claimBtn.textContent = "💳 View Wallet";
+        claimBtn.href = "transactions.html";
+
+      } else {
+
+        rewardBox.classList.add("pending-box");
+        rewardEmoji.textContent = "⏳";
+        rewardTitleText.textContent = `₹${amount} Cashback — Pending`;
+        rewardSubText.textContent = "Please wait — this will be added to your wallet within 3 days after your order is delivered.";
+
+        // Nothing to claim yet — no button while pending.
+        claimBtn.style.display = "none";
+
+      }
+
+    }
+
+    window.openScratchPopup = function () {
+
       if (!currentOrder || !(currentOrder.cashbackAmount > 0)) return;
-      setTimeout(() => {
-        modal.style.display = 'flex';
+
+      modal.style.display = 'flex';
+      fillRewardContent();
+
+      if (scratchAlreadyRevealed) {
+        // Already scratched on a previous visit — show the (live, up to
+        // date) result straight away instead of a fresh silver layer.
+        canvas.style.display = 'none';
+        scratchHintText.textContent = isCashbackCredited()
+          ? "Your cashback for this order:"
+          : "Your cashback for this order:";
+        return;
+      }
+
+      canvas.style.display = 'block';
+      scratchHintText.textContent = "Drag to scratch and reveal your cashback!";
+
+      if (!popupOpenedOnce) {
         initCanvas();
-      }, 400);
+        popupOpenedOnce = true;
+      }
+
     };
 
     window.closeModal = function () {
       modal.style.display = 'none';
     };
 
+    async function markScratchRevealed() {
+
+      if (scratchAlreadyRevealed || !orderId) return;
+      scratchAlreadyRevealed = true;
+
+      try {
+        await updateDoc(doc(db, "orders", orderId), { scratchRevealed: true });
+      } catch (error) {
+        console.log(error);
+      }
+
+    }
+
     function initCanvas() {
+
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = '#c5c5c5';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -648,6 +493,30 @@
       ctx.fillText('Scratch Here!', canvas.width / 2, canvas.height / 2);
 
       let isScratching = false;
+      let revealed = false;
+
+      function checkScratchPercentage() {
+
+        if (revealed) return;
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+        let clearPixels = 0;
+
+        for (let i = 3; i < pixels.length; i += 4) {
+          if (pixels[i] === 0) clearPixels++;
+        }
+
+        const percentageCleared = (clearPixels / (pixels.length / 4)) * 100;
+
+        if (percentageCleared >= 40) {
+          revealed = true;
+          canvas.style.pointerEvents = 'none';
+          canvas.style.display = 'none';
+          markScratchRevealed();
+        }
+
+      }
 
       function scratch(e) {
         if (!isScratching) return;
@@ -663,6 +532,8 @@
         ctx.beginPath();
         ctx.arc(x, y, 18, 0, Math.PI * 2);
         ctx.fill();
+
+        checkScratchPercentage();
       }
 
       canvas.addEventListener('mousedown', () => isScratching = true);
