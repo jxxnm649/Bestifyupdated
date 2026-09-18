@@ -569,11 +569,11 @@ function renderInventory() {
             <i class="fa-solid fa-pen text-[10px]"></i> <span class="hidden sm:inline">Edit</span>
           </button>
 
-          <div class="relative group">
-            <button type="button" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold flex items-center gap-1">
+          <div class="relative" data-more-wrap>
+            <button type="button" data-more-toggle class="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold flex items-center gap-1">
               <span>More</span> <i class="fa-solid fa-chevron-down text-[9px]"></i>
             </button>
-            <div class="absolute right-0 bottom-full mb-1 w-44 bg-white rounded-xl shadow-xl border border-slate-100 hidden group-hover:block z-30 py-1">
+            <div data-more-menu class="absolute right-0 bottom-full mb-1 w-44 bg-white rounded-xl shadow-xl border border-slate-100 hidden z-30 py-1">
               <button type="button" data-toggle-pause="${item.id}" class="w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium">
                 <i class="fa-solid ${isInactive ? "fa-play text-emerald-600" : "fa-pause text-amber-600"} w-3.5"></i>
                 ${isInactive ? "Set Active" : "Set Inactive"}
@@ -598,6 +598,17 @@ function renderInventory() {
 }
 
 inventoryListContainer.addEventListener("click", async (e) => {
+
+  // "More" dropdown — tap to open (hover alone never fires on touch)
+  const moreToggle = e.target.closest("[data-more-toggle]");
+  if (moreToggle) {
+    const menu = moreToggle.closest("[data-more-wrap]").querySelector("[data-more-menu]");
+    const wasOpen = !menu.classList.contains("hidden");
+    inventoryListContainer.querySelectorAll("[data-more-menu]").forEach(m => m.classList.add("hidden"));
+    if (!wasOpen) menu.classList.remove("hidden");
+    return;
+  }
+  inventoryListContainer.querySelectorAll("[data-more-menu]").forEach(m => m.classList.add("hidden"));
 
   const selectBtn = e.target.closest("[data-select-variant]");
   if (selectBtn) {
@@ -646,10 +657,51 @@ inventoryListContainer.addEventListener("click", async (e) => {
    REAL STOCK ADJUST
 ========================= */
 
+// Older products were created before colour variants existed — they
+// only carry top-level price/mrp/stock/image. Fall back to those so
+// Edit / stock steppers / sales still work on them.
+function resolveVariant(product, variantIndex) {
+  return product.colorVariants?.[variantIndex]
+    || product.colorVariants?.[0]
+    || {
+         color: "Default",
+         image: product.image || "",
+         price: product.price,
+         mrp: product.mrp,
+         stock: product.stock,
+         skuId: product.skuId || ""
+       };
+}
+
 async function adjustVariantStock(productId, variantIndex, delta) {
 
   const product = products.find(p => p.id === productId);
-  if (!product || !product.colorVariants?.[variantIndex]) return;
+  if (!product) return;
+
+  // Older products were saved before colour variants existed — they only
+  // have top-level price/mrp/stock. Adjust that directly instead of
+  // silently doing nothing.
+  if (!product.colorVariants?.length) {
+
+    const newStock = Math.max(0, (Number(product.stock) || 0) + delta);
+    product.stock = newStock;
+    renderInventory();
+
+    try {
+      await updateDoc(doc(db, "products", productId), { stock: newStock });
+      await logAdminAction("Adjusted stock (Inventory Management)", "Products", {
+        productId, name: product.productName, newStock
+      });
+    } catch (error) {
+      console.error(error);
+      designShowToast("Couldn't update stock — try again", "danger");
+      loadProducts();
+    }
+
+    return;
+  }
+
+  if (!product.colorVariants[variantIndex]) return;
 
   const newStock = Math.max(0, (product.colorVariants[variantIndex].stock || 0) + delta);
   product.colorVariants[variantIndex].stock = newStock;
@@ -731,7 +783,7 @@ function openSalesModal(productId, variantIndex) {
   const product = products.find(p => p.id === productId);
   if (!product) return;
 
-  const variant = product.colorVariants?.[variantIndex] || product.colorVariants?.[0];
+  const variant = resolveVariant(product, variantIndex);
   if (!variant) return;
 
   document.getElementById("sales-modal-img").src = variant.image || "";
@@ -765,7 +817,7 @@ function openEditModal(productId, variantIndex) {
   const product = products.find(p => p.id === productId);
   if (!product) return;
 
-  const variant = product.colorVariants?.[variantIndex] || product.colorVariants?.[0];
+  const variant = resolveVariant(product, variantIndex);
   if (!variant) return;
 
   document.getElementById("edit-product-id").value = productId;
@@ -799,7 +851,7 @@ editForm.addEventListener("submit", async (e) => {
   const variantIndex = parseInt(document.getElementById("edit-variant-index").value, 10);
 
   const product = products.find(p => p.id === productId);
-  if (!product || !product.colorVariants?.[variantIndex]) return;
+  if (!product) return;
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
   submitBtn.disabled = true;
@@ -809,21 +861,48 @@ editForm.addEventListener("submit", async (e) => {
     product.productName = document.getElementById("edit-title").value.trim();
     product.status = document.getElementById("edit-status").value;
 
-    product.colorVariants[variantIndex].color = document.getElementById("edit-var-color").value.trim();
-    product.colorVariants[variantIndex].price = parseFloat(document.getElementById("edit-var-price").value);
-    product.colorVariants[variantIndex].mrp = parseFloat(document.getElementById("edit-var-mrp").value);
-    product.colorVariants[variantIndex].stock = parseInt(document.getElementById("edit-var-stock").value, 10);
+    const newColor = document.getElementById("edit-var-color").value.trim();
+    const newPrice = parseFloat(document.getElementById("edit-var-price").value);
+    const newMrp = parseFloat(document.getElementById("edit-var-mrp").value);
+    const newStock = parseInt(document.getElementById("edit-var-stock").value, 10);
 
-    const updates = {
-      productName: product.productName,
-      status: product.status,
-      colorVariants: product.colorVariants
-    };
+    let updates;
 
-    if (variantIndex === (product.activeVariantIndex ?? 0)) {
-      updates.price = product.colorVariants[variantIndex].price;
-      updates.mrp = product.colorVariants[variantIndex].mrp;
-      updates.stock = product.colorVariants[variantIndex].stock;
+    if (!product.colorVariants?.[variantIndex]) {
+
+      // Legacy product with no colour variants — save straight to the
+      // product's own top-level fields instead of refusing to save.
+      product.price = newPrice;
+      product.mrp = newMrp;
+      product.stock = newStock;
+
+      updates = {
+        productName: product.productName,
+        status: product.status,
+        price: newPrice,
+        mrp: newMrp,
+        stock: newStock
+      };
+
+    } else {
+
+      product.colorVariants[variantIndex].color = newColor;
+      product.colorVariants[variantIndex].price = newPrice;
+      product.colorVariants[variantIndex].mrp = newMrp;
+      product.colorVariants[variantIndex].stock = newStock;
+
+      updates = {
+        productName: product.productName,
+        status: product.status,
+        colorVariants: product.colorVariants
+      };
+
+      if (variantIndex === (product.activeVariantIndex ?? 0)) {
+        updates.price = newPrice;
+        updates.mrp = newMrp;
+        updates.stock = newStock;
+      }
+
     }
 
     await updateDoc(doc(db, "products", productId), updates);
