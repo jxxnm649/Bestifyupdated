@@ -12,7 +12,9 @@ import {
   doc,
   getDoc,
   updateDoc,
-  increment
+  increment,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 import {
@@ -131,6 +133,10 @@ async function renderSummary() {
 
   const total = calcTotal(products);
 
+  const appliedCoupon = await findApplicableCoupon(products);
+  const couponDiscount = appliedCoupon ? Math.min(Number(appliedCoupon.discountAmount) || 0, total) : 0;
+  const finalTotal = Math.max(0, total - couponDiscount);
+
   let totalSavings = 0;
 
   const rowsHtml = products.map(p => {
@@ -167,40 +173,46 @@ async function renderSummary() {
         <span>− ₹${totalSavings}</span>
       </div>
     ` : ""}
+    ${appliedCoupon ? `
+      <div class="summary-row" style="color:#16a34a;font-weight:600;">
+        <span>🎁 Reward Coupon Applied</span>
+        <span>− ₹${couponDiscount}</span>
+      </div>
+    ` : ""}
     <div class="summary-row summary-total">
       <span>Total</span>
-      <span>₹${total}</span>
+      <span>₹${finalTotal}</span>
     </div>
   `;
 
 }
 
-// Reads the admin-configured cashback rate/cap (Settings → Cashback
-// Rewards) and applies it to this order's total. Not a fixed/hardcoded
-// rate — an admin can turn it off, or change the rate, and it takes
-// effect on the next order placed after that change.
-async function computeCashbackAmount(totalAmount) {
+// Admin-given reward coupons: a fixed-₹ discount, restricted to one
+// specific customer and one specific product, auto-applied here the
+// moment that product is in their order — no code entry needed.
+async function findApplicableCoupon(products) {
 
   try {
 
-    const settingsSnap = await getDoc(doc(db, "settings", "store"));
-    if (!settingsSnap.exists()) return 0;
+    const q = query(
+      collection(db, "coupons"),
+      where("userId", "==", currentUser.uid),
+      where("used", "==", false)
+    );
 
-    const settings = settingsSnap.data();
-    if (settings.cashbackEnabled !== true) return 0;
+    const snap = await getDocs(q);
 
-    const ratePercent = Number(settings.cashbackRatePercent) || 0;
-    const maxAmount = Number(settings.cashbackMaxAmount) || 0;
-
-    let amount = Math.round(totalAmount * (ratePercent / 100));
-    if (maxAmount > 0) amount = Math.min(amount, maxAmount);
-
-    return Math.max(0, amount);
+    for (const d of snap.docs) {
+      const c = d.data();
+      const match = products.find(p => p.id === c.productId);
+      if (match) return { id: d.id, ...c };
+    }
 
   } catch (error) {
     console.log(error);
-    return 0;
   }
+
+  return null;
 
 }
 
@@ -226,7 +238,14 @@ form.addEventListener("submit", async (e) => {
       return;
     }
 
-    const totalAmount = calcTotal(products);
+    // Real reward coupon (admin-given, restricted to this customer +
+    // this exact product) — applied automatically if they have one
+    // for something in this order.
+    const appliedCoupon = await findApplicableCoupon(products);
+
+    const rawTotal = calcTotal(products);
+    const couponDiscount = appliedCoupon ? Math.min(Number(appliedCoupon.discountAmount) || 0, rawTotal) : 0;
+    const totalAmount = Math.max(0, rawTotal - couponDiscount);
 
     // Unique vendor ids among the ordered items — lets suppliers query
     // "orders that include my products" via array-contains.
@@ -235,12 +254,6 @@ form.addEventListener("submit", async (e) => {
     async function saveOrderAndFinish(extra = {}) {
 
       const orderNumber = await nextSequenceNumber("orders");
-
-      // Cashback: rate is admin-configured (Settings → Cashback
-      // Rewards), read live so a rate change applies to every new
-      // order from that point on. If the admin hasn't turned it on,
-      // no cashback is attached — nothing carries over silently.
-      const cashbackAmount = await computeCashbackAmount(totalAmount);
 
       const orderRef = await addDoc(collection(db, "orders"), {
 
@@ -255,19 +268,26 @@ form.addEventListener("submit", async (e) => {
         paymentMethod,
         status: "Pending",
         createdAt: new Date(),
-        cashbackAmount,
-        cashbackStatus: cashbackAmount > 0 ? "pending" : "none",
+        // Reward — admin gives this manually per order after checkout,
+        // not auto-computed here. Starts empty.
+        cashbackAmount: 0,
+        cashbackStatus: "none",
+        ...(appliedCoupon ? {
+          couponCode: appliedCoupon.code,
+          couponDiscount,
+          couponProductId: appliedCoupon.productId
+        } : {}),
         ...extra
 
       });
 
-      // Track this as "pending" on the customer's own balance record
-      // too — this is the aggregate the wallet page reads, separate
-      // from their real/usable walletBalance.
-      if (cashbackAmount > 0) {
+      // Coupon is single-use — mark it spent now that the order is real.
+      if (appliedCoupon) {
         try {
-          await updateDoc(doc(db, "users", currentUser.uid), {
-            pendingCashbackBalance: increment(cashbackAmount)
+          await updateDoc(doc(db, "coupons", appliedCoupon.id), {
+            used: true,
+            usedOrderId: orderRef.id,
+            usedAt: new Date()
           });
         } catch (error) {
           console.log(error);
