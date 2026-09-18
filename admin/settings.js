@@ -32,10 +32,6 @@ const shippingFee = document.getElementById("shippingFee");
 const freeShippingThreshold = document.getElementById("freeShippingThreshold");
 const taxRate = document.getElementById("taxRate");
 
-const cashbackEnabled = document.getElementById("cashbackEnabled");
-const cashbackRatePercent = document.getElementById("cashbackRatePercent");
-const cashbackMaxAmount = document.getElementById("cashbackMaxAmount");
-
 const codEnabled = document.getElementById("codEnabled");
 const onlinePaymentsEnabled = document.getElementById("onlinePaymentsEnabled");
 const maintenanceMode = document.getElementById("maintenanceMode");
@@ -48,9 +44,6 @@ const DEFAULTS = {
   shippingFee: 0,
   freeShippingThreshold: 0,
   taxRate: 0,
-  cashbackEnabled: false,
-  cashbackRatePercent: 5,
-  cashbackMaxAmount: 100,
   codEnabled: true,
   onlinePaymentsEnabled: false,
   maintenanceMode: false
@@ -99,10 +92,6 @@ function applyToForm(settings) {
   shippingFee.value = settings.shippingFee ?? 0;
   freeShippingThreshold.value = settings.freeShippingThreshold ?? 0;
   taxRate.value = settings.taxRate ?? 0;
-
-  cashbackEnabled.checked = settings.cashbackEnabled === true;
-  cashbackRatePercent.value = settings.cashbackRatePercent ?? DEFAULTS.cashbackRatePercent;
-  cashbackMaxAmount.value = settings.cashbackMaxAmount ?? DEFAULTS.cashbackMaxAmount;
 
   codEnabled.checked = settings.codEnabled !== false;
   onlinePaymentsEnabled.checked = settings.onlinePaymentsEnabled === true;
@@ -321,9 +310,6 @@ function readFromForm() {
     shippingFee: Number(shippingFee.value) || 0,
     freeShippingThreshold: Number(freeShippingThreshold.value) || 0,
     taxRate: Math.min(100, Math.max(0, Number(taxRate.value) || 0)),
-    cashbackEnabled: cashbackEnabled.checked,
-    cashbackRatePercent: Math.min(100, Math.max(0, Number(cashbackRatePercent.value) || 0)),
-    cashbackMaxAmount: Math.max(0, Number(cashbackMaxAmount.value) || 0),
     codEnabled: codEnabled.checked,
     onlinePaymentsEnabled: onlinePaymentsEnabled.checked,
     maintenanceMode: maintenanceMode.checked

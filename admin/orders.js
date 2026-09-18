@@ -11,6 +11,8 @@ import {
   getDoc,
   updateDoc,
   addDoc,
+  setDoc,
+  increment,
   query,
   orderBy
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
@@ -217,6 +219,85 @@ if (orderStatusFilter) {
    ORDER DETAILS MODAL
 ========================= */
 
+let productsCache = null;
+
+async function getProductsCache() {
+  if (productsCache) return productsCache;
+  try {
+    const snap = await getDocs(collection(db, "products"));
+    productsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error(error);
+    productsCache = [];
+  }
+  return productsCache;
+}
+
+function generateCouponCode() {
+  const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
+  return `BESTIFY-${rand}`;
+}
+
+// Reward UI — replaces the old automatic % cashback. Admin decides,
+// per order, either a cash amount (credited to wallet on delivery,
+// same flow as before) or a coupon restricted to this one customer
+// and one product (auto-applied at their next checkout).
+function rewardSectionHTML(order) {
+
+  const hasCash = order.cashbackAmount > 0;
+  const hasCoupon = !!order.couponGivenCode;
+
+  if (hasCash || hasCoupon) {
+    return `
+      <h3 style="font-size:14px; margin:16px 0 8px;">🎁 Reward Given</h3>
+      <div class="bf-card" style="padding:12px; margin-bottom:16px; font-size:13px;">
+        ${hasCash ? `
+          <div><b>Cash Reward:</b> ₹${order.cashbackAmount} — ${order.cashbackStatus === "credited" ? "✓ Credited to wallet" : "Pending (credits when order is Delivered)"}</div>
+        ` : ""}
+        ${hasCoupon ? `
+          <div><b>Coupon:</b> ${escapeHtml(order.couponGivenCode)} — ₹${order.couponGivenDiscount} off "${escapeHtml(order.couponGivenProductName || "product")}" ${order.couponGivenUsed ? "— ✓ Used" : "— not used yet"}</div>
+        ` : ""}
+      </div>
+    `;
+  }
+
+  return `
+    <h3 style="font-size:14px; margin:16px 0 8px;">🎁 Give a Reward (optional)</h3>
+    <div class="bf-card" style="padding:14px; margin-bottom:16px;">
+
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button type="button" class="bf-btn bf-btn-ghost bf-btn-sm reward-type-btn active" data-type="cash" style="flex:1;">💰 Cash</button>
+        <button type="button" class="bf-btn bf-btn-ghost bf-btn-sm reward-type-btn" data-type="coupon" style="flex:1;">🎟️ Coupon</button>
+      </div>
+
+      <div id="rewardCashPanel">
+        <div class="bf-field">
+          <label class="bf-label">Cash Amount (₹1 – ₹200)</label>
+          <input type="number" id="rewardCashAmount" class="bf-input" min="1" max="200" step="1" placeholder="e.g. 50">
+        </div>
+        <button type="button" id="giveCashRewardBtn" class="bf-btn bf-btn-primary bf-btn-block">Give Cash Reward</button>
+      </div>
+
+      <div id="rewardCouponPanel" style="display:none;">
+        <div class="bf-field">
+          <label class="bf-label">Product this coupon applies to</label>
+          <select id="rewardCouponProduct" class="bf-select">
+            <option value="">Loading products...</option>
+          </select>
+        </div>
+        <div class="bf-field">
+          <label class="bf-label">Discount Amount (₹)</label>
+          <input type="number" id="rewardCouponDiscount" class="bf-input" min="1" step="1" placeholder="e.g. 100">
+        </div>
+        <div style="font-size:11px; opacity:.6; margin:-4px 0 10px;">Only this customer can use it, only on this product — applied automatically at their checkout, no code needed on their end.</div>
+        <button type="button" id="giveCouponRewardBtn" class="bf-btn bf-btn-primary bf-btn-block">Give Coupon Reward</button>
+      </div>
+
+    </div>
+  `;
+
+}
+
 function renderOrderDetails(order) {
 
   const total = order.total ?? order.totalPrice ?? 0;
@@ -271,6 +352,8 @@ function renderOrderDetails(order) {
     <div style="margin-bottom:16px;">
       ${productsHTML}
     </div>
+
+    ${rewardSectionHTML(order)}
 
     ${(order.status === "Pending" || order.status === "Confirmed") ? `
       <h3 style="font-size:14px; margin:16px 0 8px;">☎️ After calling the customer</h3>
@@ -476,9 +559,157 @@ if (orderDetailsContent) {
       const sure = confirm("Reject this order? This cancels it for the customer.");
       if (!sure) return;
       await applyOrderStatus("Cancelled", e.target, "❌ Reject Order");
+      return;
+    }
+
+    const typeBtn = e.target.closest(".reward-type-btn");
+    if (typeBtn) {
+      orderDetailsContent.querySelectorAll(".reward-type-btn").forEach(b => b.classList.toggle("active", b === typeBtn));
+      const isCoupon = typeBtn.dataset.type === "coupon";
+      document.getElementById("rewardCashPanel").style.display = isCoupon ? "none" : "block";
+      document.getElementById("rewardCouponPanel").style.display = isCoupon ? "block" : "none";
+
+      if (isCoupon) {
+        const select = document.getElementById("rewardCouponProduct");
+        if (select && select.options.length <= 1) {
+          const products = await getProductsCache();
+          select.innerHTML = products.length
+            ? products.map(p => `<option value="${p.id}">${escapeHtml(p.productName || "Product")} — ₹${p.price ?? ""}</option>`).join("")
+            : `<option value="">No products found</option>`;
+        }
+      }
+      return;
+    }
+
+    if (e.target.id === "giveCashRewardBtn") {
+      await giveCashReward(e.target);
+      return;
+    }
+
+    if (e.target.id === "giveCouponRewardBtn") {
+      await giveCouponReward(e.target);
+      return;
     }
 
   });
+}
+
+async function giveCashReward(btn) {
+
+  const input = document.getElementById("rewardCashAmount");
+  const amount = Number(input.value);
+
+  if (!amount || amount < 1 || amount > 200) {
+    showToast("Enter an amount between ₹1 and ₹200", "danger");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  try {
+
+    const orderId = currentDetailsOrderId;
+
+    await updateDoc(doc(db, "orders", orderId), {
+      cashbackAmount: amount,
+      cashbackStatus: "pending"
+    });
+
+    const orderSnap = await getDoc(doc(db, "orders", orderId));
+    const order = orderSnap.data();
+
+    // Same "pending" aggregate the wallet page reads, credited for
+    // real once this order is marked Delivered.
+    await updateDoc(doc(db, "users", order.userId), {
+      pendingCashbackBalance: increment(amount)
+    });
+
+    await logAdminAction("Gave cash reward", "Orders", { orderId, userId: order.userId, amount });
+
+    const idx = allOrders.findIndex(o => o.id === orderId);
+    if (idx !== -1) allOrders[idx] = { ...allOrders[idx], cashbackAmount: amount, cashbackStatus: "pending" };
+
+    renderOrderDetails({ ...order, cashbackAmount: amount, cashbackStatus: "pending" });
+    showToast("Cash reward given — customer sees it on their Cashback page", "success");
+
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Couldn't give reward.", "danger");
+    btn.disabled = false;
+    btn.textContent = "Give Cash Reward";
+  }
+
+}
+
+async function giveCouponReward(btn) {
+
+  const productSelect = document.getElementById("rewardCouponProduct");
+  const discountInput = document.getElementById("rewardCouponDiscount");
+
+  const productId = productSelect.value;
+  const discount = Number(discountInput.value);
+
+  if (!productId) {
+    showToast("Choose a product first", "danger");
+    return;
+  }
+  if (!discount || discount < 1) {
+    showToast("Enter a valid discount amount", "danger");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  try {
+
+    const orderId = currentDetailsOrderId;
+    const orderSnap = await getDoc(doc(db, "orders", orderId));
+    const order = orderSnap.data();
+
+    const products = await getProductsCache();
+    const product = products.find(p => p.id === productId);
+    const code = generateCouponCode();
+
+    await setDoc(doc(db, "coupons", code), {
+      code,
+      userId: order.userId,
+      productId,
+      productName: product?.productName || "Product",
+      discountAmount: discount,
+      used: false,
+      givenForOrderId: orderId,
+      createdAt: new Date()
+    });
+
+    await updateDoc(doc(db, "orders", orderId), {
+      couponGivenCode: code,
+      couponGivenProductId: productId,
+      couponGivenProductName: product?.productName || "Product",
+      couponGivenDiscount: discount,
+      couponGivenUsed: false
+    });
+
+    await logAdminAction("Gave coupon reward", "Orders", { orderId, userId: order.userId, code, productId, discount });
+
+    renderOrderDetails({
+      ...order,
+      couponGivenCode: code,
+      couponGivenProductName: product?.productName || "Product",
+      couponGivenDiscount: discount,
+      couponGivenUsed: false
+    });
+
+    showToast("Coupon given — applies automatically at their next checkout", "success");
+
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Couldn't give coupon.", "danger");
+    btn.disabled = false;
+    btn.textContent = "Give Coupon Reward";
+  }
+
 }
 
 
