@@ -596,19 +596,20 @@
 
           markScratchRevealed();
 
-          if (isCashbackCredited()) {
-            // Real win — spin + confetti celebration, then Claim button.
-            rewardBox.classList.add('spin-5s');
-            triggerConfetti();
-            setTimeout(() => {
-              rewardBox.classList.remove('spin-5s');
+          // 5-second spin + confetti celebration on every reveal — the
+          // reward itself is real either way. Only the Claim/View Wallet
+          // button is held back when it's still pending, since there's
+          // nothing in the wallet to go look at yet.
+          rewardBox.classList.add('spin-5s');
+          triggerConfetti();
+
+          setTimeout(() => {
+            rewardBox.classList.remove('spin-5s');
+            if (isCashbackCredited()) {
               claimBtn.style.display = 'flex';
               claimBtn.classList.add('ready');
-            }, 5000);
-          }
-          // Pending case: fillRewardContent() already shows the honest
-          // "please wait" message — no spin/confetti for something not
-          // actually credited yet, and no claim button.
+            }
+          }, 5000);
 
         }
 
