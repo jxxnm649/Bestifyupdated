@@ -111,6 +111,27 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+// Tap a thumbnail to see the photo full size — quick way to confirm
+// which image is which before hiding/replacing/deleting it.
+function openImagePreview(url, label) {
+
+  const overlay = document.createElement("div");
+  overlay.style.cssText =
+    "position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:9999;" +
+    "display:flex; align-items:center; justify-content:center; padding:20px; cursor:zoom-out;";
+
+  overlay.innerHTML = `
+    <img src="${url}" alt="${label}" style="max-width:100%; max-height:100%; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,.5);">
+    <button type="button" aria-label="Close"
+      style="position:absolute; top:14px; right:18px; background:rgba(255,255,255,.15); color:#fff;
+             border:none; width:38px; height:38px; border-radius:50%; font-size:22px; cursor:pointer;">&times;</button>
+  `;
+
+  overlay.addEventListener("click", () => overlay.remove());
+  document.body.appendChild(overlay);
+
+}
+
 function createImageManager({ field, listWrapId, fileInputId, uploadBtnId, statusId, itemLabel, emptyLabel }) {
 
   const listWrap = document.getElementById(listWrapId);
@@ -135,7 +156,7 @@ function createImageManager({ field, listWrapId, fileInputId, uploadBtnId, statu
 
     listWrap.innerHTML = manager.items.map(item => `
       <div class="bf-card" data-id="${item.id}" style="display:flex; gap:10px; align-items:center; padding:10px; ${item.hidden ? "opacity:.5;" : ""}">
-        <img src="${item.url}" alt="${itemLabel}" style="width:90px; height:38px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex-shrink:0;">
+        <img src="${item.url}" alt="${itemLabel}" class="im-thumb" style="width:90px; height:38px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex-shrink:0; cursor:zoom-in;" title="Tap to view full size">
         <div style="flex:1; font-size:12px;">${item.hidden ? "Hidden" : "Visible"}</div>
         <button type="button" class="bf-btn bf-btn-ghost bf-btn-sm im-toggle-btn" style="width:auto;">${item.hidden ? "Show" : "Hide"}</button>
         <button type="button" class="bf-btn bf-btn-ghost bf-btn-sm im-replace-btn" style="width:auto;">Replace</button>
@@ -219,6 +240,11 @@ function createImageManager({ field, listWrapId, fileInputId, uploadBtnId, statu
       const id = row.dataset.id;
       const item = manager.items.find(x => x.id === id);
       if (!item) return;
+
+      if (e.target.classList.contains("im-thumb")) {
+        openImagePreview(item.url, itemLabel);
+        return;
+      }
 
       if (e.target.classList.contains("im-toggle-btn")) {
 
