@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="../theme.css">
 <link rel="stylesheet" href="../design-system.css">
 <link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="home-orders.css">
 </head>
 
 <body class="bf-admin-body">
@@ -415,11 +417,76 @@
         </section>
 
 
-        <!-- ============ RECENT ORDERS ============ -->
-        <section class="bf-card" style="padding:18px;margin-top:20px;">
-          <h3 style="margin-top:0;">🧾 Recent Orders</h3>
-          <div id="recentOrdersList">Loading...</div>
+        <!-- ============ ORDERS PANEL ============ -->
+        <section class="bf-card hop-panel" style="padding:16px;margin-top:20px;">
+
+          <h3 style="margin:0 0 12px;">🧾 Orders</h3>
+
+          <!-- Status filter tabs -->
+          <div class="hop-tabs" id="hopTabs"></div>
+
+          <!-- Search -->
+          <div class="hop-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="hopSearch" class="hop-search-input"
+                   placeholder="Search order no, customer, phone or item...">
+          </div>
+
+          <!-- Bulk controls -->
+          <div class="hop-bulk-bar">
+            <label class="hop-select-all">
+              <input type="checkbox" id="hopSelectAll">
+              Select All (<span id="hopSelectedCount">0</span>)
+            </label>
+            <div class="hop-bulk-actions">
+              <button type="button" class="hop-bulk-btn accept" id="hopBulkAccept">
+                <i class="fa-solid fa-circle-check"></i> Accept Selected
+              </button>
+              <button type="button" class="hop-bulk-btn" id="hopBulkWhatsapp">
+                <i class="fa-brands fa-whatsapp"></i> WhatsApp
+              </button>
+            </div>
+          </div>
+
+          <!-- Order cards -->
+          <div class="hop-list" id="hopList">Loading orders…</div>
+
         </section>
+
+
+        <!-- Update Order modal -->
+        <div id="hopUpdateModal" class="hop-modal-overlay">
+          <div class="hop-modal-card">
+            <div class="hop-modal-header">
+              <div class="hop-modal-title">Update Order</div>
+              <button type="button" class="hop-close-btn" id="hopModalClose">&times;</button>
+            </div>
+            <form id="hopUpdateForm">
+              <input type="hidden" id="hopModalOrderId">
+              <div class="hop-form-group">
+                <label>Order</label>
+                <input type="text" id="hopModalOrderNo" readonly style="background:#f1f5f9;">
+              </div>
+              <div class="hop-form-group">
+                <label>Customer</label>
+                <input type="text" id="hopModalCustomer" readonly style="background:#f1f5f9;">
+              </div>
+              <div class="hop-form-group">
+                <label>Order Status</label>
+                <select id="hopModalStatus">
+                  <option value="Pending">Pending</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Packed">Packed</option>
+                  <option value="Shipped">Shipped</option>
+                  <option value="Out for Delivery">Out for Delivery</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              <button type="submit" class="hop-save-btn" id="hopModalSave">Save Changes</button>
+            </form>
+          </div>
+        </div>
 
 
       </main>
@@ -433,6 +500,11 @@
   <script
     type="module"
     src="admin.js">
+  </script>
+
+  <script
+    type="module"
+    src="home-orders.js">
   </script>
 
 </body>

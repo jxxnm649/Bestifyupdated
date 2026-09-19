@@ -24,6 +24,7 @@ import {
 } from "../design-system.js";
 
 import { logAdminAction } from "./audit.js";
+import { setOrderStatus } from "./order-status.js";
 
 
 const ordersList = document.getElementById("ordersList");
@@ -415,32 +416,18 @@ async function applyOrderStatus(newStatus, triggerBtn, defaultLabel) {
 
   try {
 
-    await updateDoc(doc(db, "orders", currentDetailsOrderId), { status: newStatus });
-
-    await logAdminAction("Updated order status", "Orders", {
-      orderId: currentDetailsOrderId,
-      newStatus
-    });
+    // Status + cashback rules live in order-status.js so this page and
+    // the admin home orders panel can never drift apart.
+    const { cashbackWarning } = await setOrderStatus(currentDetailsOrderId, newStatus);
 
     const idx = allOrders.findIndex(o => o.id === currentDetailsOrderId);
     if (idx !== -1) {
       allOrders[idx] = { ...allOrders[idx], status: newStatus };
     }
 
-    // Real cashback credit — happens exactly once, only when an order
-    // that still has a pending cashback is marked Delivered.
-    if (newStatus === "Delivered") {
-      await creditOrderCashbackIfPending(currentDetailsOrderId);
-    }
-
-    // A cancelled order's cashback will never be delivered — clear it
-    // from the customer's pending total instead of leaving it stuck.
-    if (newStatus === "Cancelled") {
-      await voidOrderCashbackIfPending(currentDetailsOrderId);
-    }
-
     renderOrderList();
-    showToast("Order status updated", "success");
+    if (cashbackWarning) showToast(cashbackWarning, "danger");
+    else showToast("Order status updated", "success");
     closeModal("orderDetailsModal");
 
   } catch (error) {
@@ -453,90 +440,6 @@ async function applyOrderStatus(newStatus, triggerBtn, defaultLabel) {
     triggerBtn.disabled = false;
     triggerBtn.textContent = defaultLabel;
 
-  }
-
-}
-
-// Credits an order's cashback to the customer's real wallet, exactly
-// once. Guarded by cashbackStatus so re-toggling the order status
-// (e.g. Delivered -> Shipped -> Delivered) never pays out twice.
-async function creditOrderCashbackIfPending(orderId) {
-
-  try {
-
-    const orderSnap = await getDoc(doc(db, "orders", orderId));
-    if (!orderSnap.exists()) return;
-
-    const order = orderSnap.data();
-    if (!order.cashbackAmount || order.cashbackStatus !== "pending") return;
-
-    const userRef = doc(db, "users", order.userId);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return;
-
-    const currentBalance = Number(userSnap.data().walletBalance) || 0;
-    const newBalance = currentBalance + Number(order.cashbackAmount);
-
-    const currentPending = Number(userSnap.data().pendingCashbackBalance) || 0;
-    // Never below 0 — guards against this order's amount already having
-    // been adjusted out-of-band (e.g. a manual correction).
-    const newPending = Math.max(0, currentPending - Number(order.cashbackAmount));
-
-    await updateDoc(userRef, {
-      walletBalance: newBalance,
-      pendingCashbackBalance: newPending
-    });
-
-    await addDoc(collection(db, "walletTransactions"), {
-      userId: order.userId,
-      customerName: order.customerName || "",
-      type: "credit",
-      amount: order.cashbackAmount,
-      reason: `Delivery cashback — Order #${order.orderNumber || orderId.slice(0, 8)}`,
-      balanceAfter: newBalance,
-      createdAt: new Date()
-    });
-
-    await updateDoc(doc(db, "orders", orderId), { cashbackStatus: "credited" });
-
-    await logAdminAction("Credited delivery cashback", "Orders", {
-      orderId,
-      userId: order.userId,
-      amount: order.cashbackAmount
-    });
-
-  } catch (error) {
-    console.error("Cashback credit error:", error);
-    showToast("Order status updated, but cashback credit failed — check wallet manually.", "danger");
-  }
-
-}
-
-// Removes a cancelled order's amount from the customer's pending
-// total — no wallet credit happens here, since the order was never
-// delivered.
-async function voidOrderCashbackIfPending(orderId) {
-
-  try {
-
-    const orderSnap = await getDoc(doc(db, "orders", orderId));
-    if (!orderSnap.exists()) return;
-
-    const order = orderSnap.data();
-    if (!order.cashbackAmount || order.cashbackStatus !== "pending") return;
-
-    const userRef = doc(db, "users", order.userId);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return;
-
-    const currentPending = Number(userSnap.data().pendingCashbackBalance) || 0;
-    const newPending = Math.max(0, currentPending - Number(order.cashbackAmount));
-
-    await updateDoc(userRef, { pendingCashbackBalance: newPending });
-    await updateDoc(doc(db, "orders", orderId), { cashbackStatus: "voided" });
-
-  } catch (error) {
-    console.error("Cashback void error:", error);
   }
 
 }
