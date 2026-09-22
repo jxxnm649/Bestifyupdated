@@ -6,7 +6,8 @@ import {
   where,
   getDocs,
   doc,
-  updateDoc
+  updateDoc,
+  arrayUnion
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 import { showToast } from "../design-system.js";
@@ -19,12 +20,15 @@ const orderCount = document.getElementById("orderCount");
 const orderSearch = document.getElementById("orderSearch");
 const orderStatusFilter = document.getElementById("orderStatusFilter");
 
-// Vendors may only move an order forward through these two steps.
-// Admin retains control over Confirmed / Out for Delivery / Delivered / Cancelled.
+// A vendor moves its OWN sub-order forward one step at a time. These
+// transitions mirror firestore.rules exactly — anything else is
+// rejected server-side, not just hidden here.
 const VENDOR_ALLOWED_NEXT_STATUS = {
-  "Pending": "Packed",
-  "Confirmed": "Packed",
-  "Packed": "Shipped"
+  "PLACED": "CONFIRMED",
+  "CONFIRMED": "PROCESSING",
+  "PROCESSING": "PACKED",
+  "PACKED": "SHIPPED",
+  "SHIPPED": "DELIVERED"
 };
 
 let allOrders = [];
@@ -47,8 +51,8 @@ function formatDate(ts) {
 }
 
 function statusPillClass(status) {
-  if (status === "Cancelled") return "bf-status-danger";
-  if (status === "Delivered") return "bf-status-success";
+  if (status === "CANCELLED") return "bf-status-danger";
+  if (status === "DELIVERED") return "bf-status-success";
   return "bf-status-pending";
 }
 
@@ -57,7 +61,7 @@ async function loadOrders() {
   try {
 
     const snapshot = await getDocs(
-      query(collection(db, "orders"), where("vendorIds", "array-contains", currentVendorId))
+      query(collection(db, "subOrders"), where("vendorId", "==", currentVendorId))
     );
 
     allOrders = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -89,7 +93,7 @@ function renderOrders() {
 
   const filtered = getFiltered();
 
-  orderCount.textContent = `Total Orders: ${allOrders.length}`;
+  orderCount.textContent = `Your Orders: ${allOrders.length}`;
 
   if (!filtered.length) {
     ordersList.innerHTML = `<div class="bf-card" style="padding:20px;">No orders found.</div>`;
@@ -98,15 +102,17 @@ function renderOrders() {
 
   ordersList.innerHTML = filtered.map((order) => {
 
-    // Only show this vendor's own line items within the order
-    const myItems = (order.products || []).filter(p => p.vendorId === currentVendorId);
+    // A sub-order document already contains only this vendor's lines —
+    // no client-side filtering needed, and no other vendor's data was
+    // ever sent to this browser.
+    const myItems = order.products || [];
 
     const itemsHtml = myItems.map(p => `
       <div style="display:flex;gap:10px;align-items:center;padding:6px 0;">
-        <img src="${escapeHtml(p.image || "")}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;">
+        <img src="${escapeHtml(p.productImage || "")}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;">
         <div style="font-size:13px;">
-          ${escapeHtml(p.productName || "")}${p.qty > 1 ? ` × ${p.qty}` : ""}
-          <div style="opacity:.65;">₹${escapeHtml(String(p.price ?? 0))}</div>
+          ${escapeHtml(p.productName || "")}${(p.quantity || 1) > 1 ? ` × ${p.quantity}` : ""}
+          <div style="opacity:.65;">₹${escapeHtml(String(p.unitPrice ?? 0))}</div>
         </div>
       </div>
     `).join("");
@@ -118,7 +124,7 @@ function renderOrders() {
 
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
           <div>
-            <div style="font-weight:700;">#${escapeHtml(String(order.orderNumber || order.id.slice(0, 8).toUpperCase()))}</div>
+            <div style="font-weight:700;">#${escapeHtml(String(order.subOrderNumber || order.id.slice(0, 8).toUpperCase()))}</div>
             <div style="font-size:12px;opacity:.65;">${formatDate(order.createdAt)} · ${escapeHtml(order.customerName || "Customer")}</div>
           </div>
           <span class="bf-status-pill ${statusPillClass(order.status)}">${escapeHtml(order.status || "Pending")}</span>
@@ -126,6 +132,11 @@ function renderOrders() {
 
         <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">
           ${itemsHtml || "<div style='font-size:13px;opacity:.6;'>No items from your shop in this order.</div>"}
+        </div>
+
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;display:flex;justify-content:space-between;">
+          <span style="opacity:.7;">Order ₹${escapeHtml(String(order.itemsTotal ?? 0))} − ${escapeHtml(String(order.commissionRate ?? 0))}% commission</span>
+          <b style="color:var(--leaf,#2F7A4F);">You earn ₹${escapeHtml(String(order.vendorPayable ?? 0))}</b>
         </div>
 
         ${nextStatus ? `
@@ -162,7 +173,18 @@ ordersList.addEventListener("click", async (e) => {
 
   try {
 
-    await updateDoc(doc(db, "orders", id), { status: nextStatus });
+    // Only status / statusHistory / updatedAt are writable by a vendor
+    // (firestore.rules). Financial fields can't be touched from here.
+    await updateDoc(doc(db, "subOrders", id), {
+      status: nextStatus,
+      statusHistory: arrayUnion({
+        status: nextStatus,
+        at: new Date(),
+        by: "vendor",
+        actorId: currentVendorId
+      }),
+      updatedAt: new Date()
+    });
 
     const idx = allOrders.findIndex(o => o.id === id);
     if (idx !== -1) allOrders[idx].status = nextStatus;

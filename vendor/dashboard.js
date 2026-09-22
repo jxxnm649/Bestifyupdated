@@ -25,26 +25,27 @@ async function loadStats(user, vendor) {
     );
     document.getElementById("statProducts").textContent = productsSnap.size;
 
-    // Orders containing this vendor's items
+    // This vendor's own sub-orders (one document per vendor per order)
     const ordersSnap = await getDocs(
-      query(collection(db, "orders"), where("vendorIds", "array-contains", user.uid))
+      query(collection(db, "subOrders"), where("vendorId", "==", user.uid))
     );
 
     const pending = ordersSnap.docs.filter((d) => {
       const status = d.data().status;
-      return !["Delivered", "Cancelled"].includes(status);
+      return !["DELIVERED", "CANCELLED"].includes(status);
     }).length;
 
     document.getElementById("statPendingOrders").textContent = pending;
 
-    // Earnings (commissions)
-    const commissionsSnap = await getDocs(
-      query(collection(db, "commissions"), where("vendorId", "==", user.uid))
-    );
-
+    // Earnings = what the VENDOR keeps (vendorPayable), not the
+    // commission Bestify takes. This previously summed commissionAmount,
+    // which showed the vendor Bestify's cut as if it were their income.
     let totalEarnings = 0;
-    commissionsSnap.forEach((d) => {
-      totalEarnings += Number(d.data().commissionAmount || 0);
+    ordersSnap.forEach((d) => {
+      const s = d.data();
+      if (s.status !== "CANCELLED") {
+        totalEarnings += Number(s.vendorPayable || 0);
+      }
     });
 
     document.getElementById("statEarnings").textContent = `₹${totalEarnings.toLocaleString("en-IN")}`;

@@ -147,8 +147,18 @@ function applyFilters() {
     return matchesStatus && matchesFrom && matchesTo;
   });
 
-  const total = allEntries.reduce((s, c) => s + Number(c.commissionAmount || 0), 0);
-  const collected = allEntries.filter(c => c.status === "Collected").reduce((s, c) => s + Number(c.commissionAmount || 0), 0);
+  // A vendor's earnings are what they KEEP (vendorPayable), not the
+  // commission Bestify deducts. These previously summed commissionAmount,
+  // which displayed Bestify's cut to the vendor as if it were income.
+  // Older hand-entered rows have no vendorPayable, so fall back to
+  // orderAmount − commissionAmount for those.
+  const payableOf = (c) => {
+    if (c.vendorPayable != null) return Number(c.vendorPayable) || 0;
+    return Math.max(0, Number(c.orderAmount || 0) - Number(c.commissionAmount || 0));
+  };
+
+  const total = allEntries.reduce((s, c) => s + payableOf(c), 0);
+  const collected = allEntries.filter(c => c.status === "Collected").reduce((s, c) => s + payableOf(c), 0);
   const pending = total - collected;
 
   statTotal.textContent = `₹${total.toLocaleString("en-IN")}`;
@@ -167,10 +177,11 @@ function applyFilters() {
     return `
       <div class="bf-card" style="padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
         <div>
-          <div style="font-weight:700;">₹${escapeHtml(String(c.commissionAmount ?? 0))} commission</div>
+          <div style="font-weight:700;">You earn ₹${escapeHtml(String(payableOf(c)))}</div>
           <div style="font-size:12px;opacity:.65;margin-top:2px;">
-            Order Value: ₹${escapeHtml(String(c.orderAmount ?? 0))} · Rate: ${escapeHtml(String(c.commissionRate ?? 0))}% · ${formatDate(c.createdAt)}
+            Order ₹${escapeHtml(String(c.orderAmount ?? 0))} − ${escapeHtml(String(c.commissionRate ?? 0))}% commission (₹${escapeHtml(String(c.commissionAmount ?? 0))}) · ${formatDate(c.createdAt)}
           </div>
+          ${c.subOrderNumber ? `<div style="font-size:11.5px;opacity:.55;margin-top:2px;">#${escapeHtml(c.subOrderNumber)}</div>` : ""}
           ${c.note ? `<div style="font-size:12px;opacity:.6;margin-top:2px;">📝 ${escapeHtml(c.note)}</div>` : ""}
         </div>
         <span class="bf-status-pill ${isCollected ? "bf-status-success" : "bf-status-pending"}">${isCollected ? "Collected" : "Pending"}</span>
