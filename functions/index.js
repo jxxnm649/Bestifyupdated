@@ -43,6 +43,9 @@ const admin = require("firebase-admin");
 const crypto = require("crypto");
 
 admin.initializeApp();
+
+// Shared multi-vendor order engine (see functions/place-order.js).
+const { _createOrder: createOrder } = require("./place-order");
 const db = admin.firestore();
 
 const RAZORPAY_KEY_ID = defineSecret("RAZORPAY_KEY_ID");
@@ -188,37 +191,31 @@ exports.verifyRazorpayPayment = onCall(
       throw new HttpsError("failed-precondition", "Payment verification failed.");
     }
 
-    // Recompute the total server-side from the product list rather than
-    // trusting a client-sent total, so a tampered "total" can't slip
-    // through even after signature verification.
-    const serverTotal = orderData.products.reduce(
-      (sum, item) => sum + Number(item.price) * Number(item.qty || 1),
-      0
-    );
-
-    const orderNumber = await nextSequenceNumber("orders");
-
-    // Unique vendor ids among the ordered items — lets suppliers query
-    // "orders that include my products" via array-contains.
-    const vendorIds = [...new Set(
-      orderData.products.map(item => item.vendorId).filter(Boolean)
-    )];
-
-    const orderRef = await db.collection("orders").add({
-      userId: request.auth.uid,
-      customerName: orderData.customerName || "",
-      mobile: orderData.mobile || "",
-      address: orderData.address || "",
-      products: orderData.products,
-      vendorIds,
-      orderNumber,
-      total: serverTotal,
-      paymentMethod: "online",
-      status: "Paid",
-      paymentId: razorpay_payment_id,
-      razorpayOrderId: razorpay_order_id,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    // Payment is proven. Hand off to the shared order engine, which
+    // re-reads every product server-side, checks and reduces stock in
+    // a transaction, and creates the Master Order + Sub-orders +
+    // Commission records. The Razorpay payment id doubles as the
+    // idempotency key, so a repeated callback can never create a
+    // second order or reduce stock twice.
+    const result = await createOrder({
+      uid: request.auth.uid,
+      requestId: `rzp_${razorpay_payment_id}`,
+      items: orderData.products,
+      customer: {
+        name: orderData.customerName || "",
+        mobile: orderData.mobile || "",
+        address: orderData.address || "",
+        pincode: /^\d{6}$/.test(String(orderData.pincode || "")) ? String(orderData.pincode) : "",
+        deliveryMethod: orderData.deliveryMethod || "home"
+      },
+      payment: {
+        method: "online",
+        paymentId: razorpay_payment_id,
+        razorpayOrderId: razorpay_order_id
+      }
     });
+
+    const orderRef = { id: result.orderId };
 
     // Clear the cart server-side, same as the old client-only flow did.
     if (Array.isArray(orderData.cartItemIds) && orderData.cartItemIds.length > 0) {
@@ -559,3 +556,11 @@ exports.revokeAllSessions = onCall(async (request) => {
   return { success: true };
 
 });
+
+
+/* ============================================================
+   COD orders — creates the order through the same shared engine
+   used by the verified-online path above.
+   ============================================================ */
+
+exports.placeOrder = require("./place-order").placeOrder;
