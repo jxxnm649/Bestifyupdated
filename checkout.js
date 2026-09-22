@@ -28,6 +28,47 @@ import { nextSequenceNumber } from "./counters.js";
 const functions = getFunctions();
 const createRazorpayOrder = httpsCallable(functions, "createRazorpayOrder");
 const verifyRazorpayPayment = httpsCallable(functions, "verifyRazorpayPayment");
+const placeOrder = httpsCallable(functions, "placeOrder");
+
+
+/* =========================
+   Idempotency key for COD.
+
+   Generated once per checkout visit and kept in sessionStorage, so a
+   double-tap, a refresh mid-request, or a retry all send the SAME id.
+   The server treats a repeat id as "already done" and returns the
+   original order instead of creating a second one. Cleared only once
+   an order actually succeeds.
+========================= */
+
+function getClientRequestId() {
+  let id = sessionStorage.getItem("bf_order_request_id");
+  if (!id) {
+    id = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    sessionStorage.setItem("bf_order_request_id", id);
+  }
+  return id;
+}
+
+function clearClientRequestId() {
+  sessionStorage.removeItem("bf_order_request_id");
+}
+
+// Cart rows are the customer's own data, so they're cleared from the
+// client. The COD path needs this because the server no longer writes
+// the order (and so no longer clears the cart) for COD.
+async function clearCartAfterOrder(cartSnapshot) {
+  if (!cartSnapshot) return;
+  try {
+    await Promise.all(
+      cartSnapshot.docs.map(d =>
+        deleteDoc(doc(db, "users", currentUser.uid, "cart", d.id))
+      )
+    );
+  } catch (error) {
+    console.log("Cart clear failed (order is already placed):", error);
+  }
+}
 
 const form = document.getElementById("checkoutForm");
 const summaryEl = document.getElementById("orderSummary");
@@ -69,6 +110,15 @@ async function prefillFromProfile(user) {
     if (nameField && !nameField.value && isValidText(data.name)) nameField.value = data.name;
     if (mobileField && !mobileField.value && isValidText(data.mobile)) mobileField.value = data.mobile;
     if (addressField && !addressField.value && isValidText(data.address)) addressField.value = data.address;
+
+    // Pincode: last one saved on their profile, else the one they set
+    // on the home page's "Delivering to" line.
+    const pincodeField = document.getElementById("pincode");
+    if (pincodeField && !pincodeField.value) {
+      const saved = /^\d{6}$/.test(String(data.pincode || "")) ? data.pincode
+        : (localStorage.getItem("bf_delivery_pincode") || "");
+      if (/^\d{6}$/.test(saved)) pincodeField.value = saved;
+    }
 
   } catch (error) {
     console.log(error);
@@ -223,9 +273,19 @@ form.addEventListener("submit", async (e) => {
   const customerName = document.getElementById("customerName").value;
   const mobile = document.getElementById("mobile").value;
   const address = document.getElementById("address").value;
+  const deliveryMethod = document.querySelector('input[name="deliveryMethod"]:checked')?.value || "home";
+  const pincode = deliveryMethod === "pickup" ? "" : document.getElementById("pincode").value.trim();
   const paymentMethod = document.querySelector(
     'input[name="paymentMethod"]:checked'
   ).value;
+
+  if (deliveryMethod !== "pickup" && !/^\d{6}$/.test(pincode)) {
+    alert("Please enter a valid 6-digit pincode.");
+    document.getElementById("pincode").focus();
+    return;
+  }
+
+  if (pincode) localStorage.setItem("bf_delivery_pincode", pincode);
 
   const placeOrderBtn = document.getElementById("placeOrderBtn");
 
@@ -261,6 +321,7 @@ form.addEventListener("submit", async (e) => {
         customerName,
         mobile,
         address,
+        pincode,
         products,
         vendorIds,
         orderNumber,
@@ -314,12 +375,47 @@ form.addEventListener("submit", async (e) => {
     }
 
     // ---------- Cash on Delivery ----------
+    // The order is NOT written from here any more. placeOrder (Cloud
+    // Function) re-reads every product server-side, checks and reduces
+    // stock in a transaction, and creates the Master Order, the vendor
+    // Sub-orders and the Commission records. clientRequestId makes the
+    // call idempotent, so a double-tap or refresh can't place twice.
     if (paymentMethod === "cod") {
 
       placeOrderBtn.disabled = true;
       placeOrderBtn.textContent = "Placing Order...";
 
-      await saveOrderAndFinish();
+      try {
+
+        const { data } = await placeOrder({
+          clientRequestId: getClientRequestId(),
+          items: products.map(p => ({
+            id: p.id,
+            qty: p.qty || 1,
+            ...(p.selectedSize ? { selectedSize: p.selectedSize } : {}),
+            ...(p.selectedColour ? { selectedColour: p.selectedColour } : {})
+          })),
+          customer: {
+            name: customerName,
+            mobile,
+            address,
+            pincode,
+            deliveryMethod
+          }
+        });
+
+        await clearCartAfterOrder(cartSnapshot);
+        clearClientRequestId();
+
+        window.location.href = `payment-success.html?orderId=${data.orderId}&method=cod`;
+
+      } catch (error) {
+        console.error("Place order error:", error);
+        alert(error.message || "Could not place your order. Please try again.");
+        placeOrderBtn.disabled = false;
+        placeOrderBtn.textContent = "Place Order";
+      }
+
       return;
 
     }
@@ -372,6 +468,7 @@ form.addEventListener("submit", async (e) => {
               customerName,
               mobile,
               address,
+              pincode,
               products,
               cartItemIds: (!buyNowProductId && cartSnapshot)
                 ? cartSnapshot.docs.map(d => d.id)
